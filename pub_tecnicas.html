@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publicaciones Técnicas | INIFAP C.E. Zacatecas</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Regla rápida: quitar subrayado en enlaces del header/top y nav principal -->
+  <style>
+    /* Evita subrayado persistente en enlaces del encabezado */
+    .header-top .menu-top a,
+    .header-top .menu-top a:link,
+    .header-top .menu-top a:visited,
+    .header-top .menu-top a:hover,
+    .header-top .menu-top a:active,
+    .header-bottom .nav-link,
+    .header-bottom .nav-link:link,
+    .header-bottom .nav-link:visited,
+    .header-bottom .nav-link:hover,
+    .header-bottom .nav-link:active {
+      text-decoration: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado federal -->
+  <header>
+    <div class="header-top d-flex justify-content-between align-items-center px-4">
+      <div class="d-flex align-items-center">
+        <img src="logo_blanco.svg" alt="Escudo de México" class="logo-mx me-2">
+        <span class="fw-bold text-white"></span>
+      </div>
+      <div class="menu-top">
+        <a href="#" class="text-white me-3">Trámites</a>
+        <a href="#" class="text-white me-3">Gobierno</a>
+        <a href="#" class="text-white"><i class="bi bi-search"></i></a>
+      </div>
+    </div>
+    <nav class="header-bottom d-flex justify-content-center">
+      <ul class="nav">
+        <li class="nav-item"><a class="nav-link text-white" href="#">Trámites</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Blog</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Multimedia</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Prensa</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Agenda</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Acciones y programas</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Documentos</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="#">Transparencia</a></li>
+      </ul>
+    </nav>
+    <!-- Subnavegación de publicaciones -->
+    <nav class="bg-light py-2">
+      <ul class="nav justify-content-center">
+        <li class="nav-item"><a class="nav-link text-gob" href="index.html">Publicaciones Tecnicas</a></li>
+        <li class="nav-item"><a class="nav-link active text-gob" href="pub_tecnicas.html">Publicaciones Cientificas</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="container-fluid mt-4 mb-5">
+    <div class="row gx-4">
+      <!-- Panel de filtros -->
+      <aside class="col-md-3 mb-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="text-gob fw-bold mb-3">Filtrar publicaciones</h5>
+            <input id="buscar" type="text" class="form-control mb-3" placeholder="Buscar por palabra...">
+            <select id="anio" class="form-select mb-3"></select>
+            <select id="tipo" class="form-select mb-3">
+              <option value="">Todos los tipos</option>
+              <option value="pdf">PDF</option>
+              <option value="video">Video</option>
+            </select>
+            <button id="limpiar" class="btn btn-gob w-100">Limpiar filtros</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Sección de publicaciones -->
+      <section class="col-md-9">
+        <h4 class="fw-bold text-gob mb-3">Publicaciones Cientificas</h4>
+        <div id="contenedor" class="row g-4"></div>
+
+        <!-- Paginación -->
+        <nav>
+          <ul id="paginacion" class="pagination justify-content-center mt-4">
+            <li class="page-item"><a class="page-link text-gob" href="#"></a></li>
+          </ul>
+        </nav>
+      </section>
+    </div>
+  </main>
+
+  <footer class="text-center py-4 border-top text-muted small">
+    © INIFAP C.E. Zacatecas — Publicaciones Cientificas
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="pub_tecnicas.js"></script>
+</body>
+</html>
