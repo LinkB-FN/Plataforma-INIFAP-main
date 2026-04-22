@@ -1,0 +1,87 @@
+/* Migrated styles from project root */
+body {
+  font-family: 'Montserrat', sans-serif;
+  background-color: #f7f8f9;
+}
+
+/* HEADER FEDERAL */
+.header-top {
+  background-color: #801436;
+  height: 70px;
+}
+
+.header-bottom {
+  background-color: #60042E;
+  padding: 0.4rem 0;
+}
+
+.header-bottom .nav-link {
+  font-weight: 500;
+  color: #fff !important;
+}
+
+.header-top .menu-top a {
+  text-decoration: none !important;
+}
+
+.logo-mx {
+  height: 42px;
+}
+
+.text-gob {
+  color: #801436;
+}
+
+.btn-gob {
+  background-color: #801436;
+  color: #fff;
+  border: none;
+}
+
+.btn-gob:hover {
+  background-color: #60042E;
+}
+
+/* CARD DE PUBLICACIÓN */
+.card-publicacion {
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease;
+}
+
+.card-publicacion:hover {
+  transform: translateY(-4px);
+}
+
+.card-publicacion img {
+  height: 240px;
+  object-fit: cover;
+  background: #f2f2f2;
+}
+
+.card-publicacion img.img-small {
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333;
+}
+
+footer {
+  background: #fff;
+}
+
+/* Pagination tweaks for publicaciones */
+.publicaciones-paginacion .pagination {
+  margin-bottom: 0;
+  gap: 0.25rem;
+}
+
+.publicaciones-paginacion .page-link {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
