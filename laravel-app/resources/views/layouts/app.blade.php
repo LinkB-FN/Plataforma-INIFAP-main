@@ -75,10 +75,13 @@
                                 <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Archivos Subidos
                             </a>
                             @if(Auth::check())
+                                <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('admin.dashboard') }}">
+                                    <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Panel de Administración
+                                </a>
                                 <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="#" onclick="document.getElementById('logout-form').submit();">
                                     <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Cerrar Sesión
                                 </a>
-                                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                <form id="logout-form" action="{{ route('admin.logout') }}" method="POST" class="d-none">
                                     @csrf
                                 </form>
                             @else

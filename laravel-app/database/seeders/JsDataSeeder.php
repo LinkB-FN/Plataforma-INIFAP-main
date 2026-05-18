@@ -7,27 +7,60 @@ use Illuminate\Support\Facades\DB;
 
 class JsDataSeeder extends Seeder
 {
-    private function normalize($rows) {
-        $normalized = [];
-        foreach ($rows as $row) {
-            $normalized[] = array_merge([
-                'titulo' => null,
-                'titulo_en' => null,
-                'year' => null,
-                'tipo' => 'pdf',
-                'portada_path' => null,
-                'file_path' => null,
-                'external_url' => null,
-                'is_published' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ], $row);
+    private function insertarPublicaciones($tipoId, $datos) {
+        foreach ($datos as $row) {
+            $url_archivo = $row['external_url'] ?? ($row['file_path'] ?? '#');
+            $categoria_medio = 'documento';
+            $formato = 'pdf';
+
+            if (isset($row['tipo'])) {
+                if ($row['tipo'] == 'video') {
+                    $categoria_medio = 'video';
+                    $formato = 'mp4';
+                } else if ($row['tipo'] == 'ilustraciones') {
+                    $categoria_medio = 'imagen';
+                    $formato = 'png';
+                }
+            }
+
+            $pubId = DB::table('publicaciones')->insertGetId([
+                'id_tipo' => $tipoId,
+                'titulo' => $row['titulo'],
+                'titulo_en' => $row['titulo_en'] ?? null,
+                'ano' => $row['year'] ?? null,
+                'url_imagen' => $row['portada_path'] ?? null,
+                'muestra' => $row['is_published'] ?? true,
+                'activo' => true,
+                'creado_en' => now(),
+                'actualizado_en' => now(),
+            ]);
+
+            DB::table('archivos')->insert([
+                'id_publicacion' => $pubId,
+                'categoria_medio' => $categoria_medio,
+                'formato' => $formato,
+                'url_archivo' => $url_archivo,
+                'es_principal' => true,
+                'creado_en' => now(),
+            ]);
         }
-        return $normalized;
     }
 
     public function run()
     {
+        // 1 = cientifica, 2 = tecnica (segun el script SQL base)
+        // Para ilustraciones, crearemos el tipo 3 si no existe
+        $ilustracionTipo = DB::table('tipos_publicacion')->where('clave', 'ilustracion')->first();
+        if (!$ilustracionTipo) {
+            $tipoIlusId = DB::table('tipos_publicacion')->insertGetId([
+                'clave' => 'ilustracion',
+                'nombre' => 'Ilustraciones',
+                'orden' => 3
+            ]);
+        } else {
+            $tipoIlusId = $ilustracionTipo->id;
+        }
+
         $tecnicas = [
             ["titulo" => "Funcionalidad de las cáscaras de la tuna Roja Lisa Parte II, in vivo", "titulo_en" => "Functionality of Red Smooth Prickly Pear Peels Part II, in vivo", "year" => 2023, "tipo" => "pdf", "portada_path" => "imagenes/FT121 MHer.png", "external_url" => "http://zacatecas.inifap.gob.mx/modulo/mostrarPub.php?id=169&t=1"],
             ["titulo" => "Efecto antidiabético de tallarines con harina extruida de cotiledones de frijol", "titulo_en" => "Antidiabetic effect of noodles with extruded cotyledon bean flour", "year" => 2023, "tipo" => "pdf", "portada_path" => "imagenes/FT120 RCruz.png", "external_url" => "http://zacatecas.inifap.gob.mx/modulo/mostrarPub.php?id=168&t=1"],
@@ -152,8 +185,14 @@ class JsDataSeeder extends Seeder
             ["titulo" => "Mejoramiento genético en maíz criollo de Zacatecas", "year" => 2018, "tipo" => "pdf", "portada_path" => "imagenes/icopdf.png", "file_path" => "pdfs/tec09.pdf"]
         ];
 
-        DB::table('publicaciones_tecnicas')->insert($this->normalize($tecnicas));
-        DB::table('publicaciones_ilustraciones')->insert($this->normalize($ilustraciones));
-        DB::table('publicaciones_cientificas')->insert($this->normalize($cientificas));
+        // Limpiar para asegurar idempotencia (opcional, pero útil)
+        DB::table('archivos')->delete();
+        DB::table('publicaciones')->delete();
+
+        // 1 = Científicas, 2 = Técnicas
+        $this->insertarPublicaciones(2, $tecnicas);
+        $this->insertarPublicaciones($tipoIlusId, $ilustraciones);
+        $this->insertarPublicaciones(1, $cientificas);
     }
 }
+
