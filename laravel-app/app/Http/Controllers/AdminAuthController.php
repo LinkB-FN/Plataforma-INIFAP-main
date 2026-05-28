@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Usuario;
 
 class AdminAuthController extends Controller
@@ -23,14 +24,12 @@ class AdminAuthController extends Controller
 
         $usuario = Usuario::where('email', $credentials['email'])->first();
 
-        // Si no existe, error normal
         if (!$usuario) {
             return back()->withErrors([
                 'email' => 'Las credenciales no coinciden con nuestros registros.',
             ])->onlyInput('email');
         }
 
-        // Si existe, checamos si está activo y no bloqueado
         if (!$usuario->activo) {
             return back()->withErrors(['email' => 'Usuario inactivo.']);
         }
@@ -38,28 +37,32 @@ class AdminAuthController extends Controller
             return back()->withErrors(['email' => 'Cuenta temporalmente bloqueada.']);
         }
 
-        // Intentar loguear
+        $hash = $usuario->password_hash ?? '';
+        if (!str_starts_with($hash, '$2')) {
+            if (Hash::check($credentials['password'], $hash)) {
+                $usuario->password_hash = Hash::make($credentials['password']);
+                $usuario->save();
+            } else {
+                DB::select('SELECT fn_registrar_intento_login(?, false, ?::inet)', [$usuario->id, $request->ip()]);
+                return back()->withErrors(['email' => 'Las credenciales no coinciden.'])->onlyInput('email');
+            }
+        }
+
         if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
             $request->session()->regenerate();
-            
-            // Registrar intento exitoso en PG
             DB::select('SELECT fn_registrar_intento_login(?, true, ?::inet)', [$usuario->id, $request->ip()]);
-
             return redirect()->intended('/biblioteca/administrador');
         }
 
-        // Registrar intento fallido
         $res = DB::select('SELECT fn_registrar_intento_login(?, false, ?::inet) as result', [$usuario->id, $request->ip()]);
-        $json = json_decode($res[0]->result);
-        
+        $json = json_decode($res[0]->result ?? '{}');
+
         $msg = 'Las credenciales no coinciden.';
-        if ($json && isset($json->bloqueado) && $json->bloqueado) {
+        if ($json && ($json->bloqueado ?? false)) {
             $msg = 'Cuenta bloqueada temporalmente por demasiados intentos fallidos.';
         }
 
-        return back()->withErrors([
-            'email' => $msg,
-        ])->onlyInput('email');
+        return back()->withErrors(['email' => $msg])->onlyInput('email');
     }
 
     public function logout(Request $request)
