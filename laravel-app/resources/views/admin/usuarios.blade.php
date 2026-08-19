@@ -1,6 +1,6 @@
 @extends('admin.dashboard')
 
-@section('content')
+@section('content_inner')
 <style>
     .admin-card { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
     .form-group { margin-bottom: 15px; }

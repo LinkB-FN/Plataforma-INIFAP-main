@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Publicacion;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
+use App\Services\NotificadorSuscripciones;
 
 class PublicacionController extends Controller
 {
@@ -23,6 +25,7 @@ class PublicacionController extends Controller
         $ambito = $request->input('ambito', 'todos');
         $anio = $request->input('anio');
         $tipo = $request->input('tipo'); // formato
+        $disponibilidad = $request->input('disponibilidad', 'todos');
         $orden = $request->input('orden', 'reciente'); // reciente o antiguo
 
         $query = DB::table('publicaciones as p')
@@ -41,7 +44,6 @@ class PublicacionController extends Controller
                 'tp.clave as ambito',
                 'p.url_imagen as portada_path',
                 'a.formato as tipo',
-                'a.url_archivo as external_url',
                 'a.url_archivo as file_path',
                 'p.muestra as is_published',
                 'p.creado_en as created_at',
@@ -76,7 +78,49 @@ class PublicacionController extends Controller
             $query->orderByRaw('COALESCE(p.ano, 2099) DESC')->orderBy('p.creado_en', 'desc');
         }
 
-        $publicaciones = $query->paginate(12)->appends($request->query());
+        if (in_array($disponibilidad, ['disponibles', 'no_disponibles'], true)) {
+            // La disponibilidad depende de que el archivo local exista, no sólo
+            // de que haya una ruta guardada en la base de datos.
+            $filtradas = $query->get()->filter(function ($publicacion) use ($disponibilidad) {
+                $archivoDisponible = false;
+                $ruta = trim((string) ($publicacion->file_path ?? ''));
+
+                if ($ruta !== '') {
+                    $archivoDisponible = str_starts_with($ruta, 'http://')
+                        || str_starts_with($ruta, 'https://')
+                        || file_exists(storage_path('app/public/' . ltrim(str_replace('\\', '/', $ruta), '/')));
+                }
+
+                // Las ilustraciones pueden abrir su portada como archivo.
+                if (!$archivoDisponible && ($publicacion->ambito ?? '') === 'ilustracion') {
+                    $portada = trim((string) ($publicacion->portada_path ?? ''));
+                    if ($portada !== '') {
+                        if (str_starts_with($portada, 'http://') || str_starts_with($portada, 'https://')) {
+                            $archivoDisponible = true;
+                        } else {
+                            $portada = ltrim(str_replace('\\', '/', $portada), '/');
+                            $archivoDisponible = str_starts_with($portada, 'imagenes/')
+                                ? file_exists(public_path($portada))
+                                : file_exists(storage_path('app/public/' . $portada));
+                        }
+                    }
+                }
+
+                return $disponibilidad === 'disponibles' ? $archivoDisponible : !$archivoDisponible;
+            })->values();
+
+            $porPagina = 12;
+            $pagina = LengthAwarePaginator::resolveCurrentPage();
+            $publicaciones = new LengthAwarePaginator(
+                $filtradas->forPage($pagina, $porPagina)->values(),
+                $filtradas->count(),
+                $porPagina,
+                $pagina,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            $publicaciones = $query->paginate(12)->appends($request->query());
+        }
 
         return view('publicaciones.index', compact('publicaciones'));
     }
@@ -91,7 +135,7 @@ class PublicacionController extends Controller
         return view('publicaciones.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NotificadorSuscripciones $notificador)
     {
         $request->validate([
             'titulo' => 'required|string|max:255',
@@ -178,6 +222,7 @@ class PublicacionController extends Controller
             ]);
 
             DB::commit();
+            $notificador->notificar($publicacion);
             return redirect()->route('publicaciones.index')->with('status', 'Publicación creada correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();

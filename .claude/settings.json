@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Read(//c/Users/luism/AppData/Local/Temp/claude/c--Users-luism-Downloads-Plataforma-INIFAP-main-main-Plataforma-INIFAP-main-main/8f0cca23-256b-4d0c-98b0-7a78ac18e0e2/scratchpad/**)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node inspect.js)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

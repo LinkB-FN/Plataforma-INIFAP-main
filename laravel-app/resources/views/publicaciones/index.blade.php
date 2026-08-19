@@ -5,14 +5,14 @@
 @section('content')
 <main class="container-fluid mt-4 mb-5">
   <div class="row gx-4">
-    <aside class="col-md-3 mb-4">
+    <aside class="col-md-4 mb-4">
       <div class="card shadow-sm border-0">
         <div class="card-body">
           <h5 class="text-gob fw-bold mb-3">Filtrar publicaciones</h5>
           <form method="GET" action="{{ route('publicaciones.index') }}" id="filtros-form">
             <input name="buscar" type="text" class="form-control mb-3" placeholder="Buscar por palabra..." value="{{ request('buscar') }}">
             <select name="ambito" class="form-select mb-3" onchange="document.getElementById('filtros-form').submit();">
-              <option value="todos" {{ request('ambito') == 'todos' ? 'selected' : '' }}>Todos las publicaciones</option>
+              <option value="todos" {{ request('ambito') == 'todos' ? 'selected' : '' }}>Todas las publicaciones</option>
               <option value="tecnicas" {{ request('ambito') == 'tecnicas' ? 'selected' : '' }}>Publicaciones técnicas</option>
               <option value="cientificas" {{ request('ambito') == 'cientificas' ? 'selected' : '' }}>Publicaciones científicas</option>
               <option value="ilustraciones" {{ request('ambito') == 'ilustraciones' ? 'selected' : '' }}>Ilustraciones</option>
@@ -30,6 +30,11 @@
               <option value="folleto" {{ request('tipo') == 'folleto' ? 'selected' : '' }}>Folleto</option>
               <option value="ilustraciones" {{ request('tipo') == 'ilustraciones' ? 'selected' : '' }}>Imagen</option>
             </select>
+            <select name="disponibilidad" class="form-select mb-3" onchange="document.getElementById('filtros-form').submit();">
+              <option value="todos" {{ request('disponibilidad', 'todos') == 'todos' ? 'selected' : '' }}>Cualquier disponibilidad</option>
+              <option value="disponibles" {{ request('disponibilidad') == 'disponibles' ? 'selected' : '' }}>Archivos disponibles</option>
+              <option value="no_disponibles" {{ request('disponibilidad') == 'no_disponibles' ? 'selected' : '' }}>Archivos no disponibles</option>
+            </select>
             <select name="orden" class="form-select mb-3" onchange="document.getElementById('filtros-form').submit();">
               <option value="reciente" {{ request('orden', 'reciente') == 'reciente' ? 'selected' : '' }}>Más recientes primero</option>
               <option value="antiguo" {{ request('orden') == 'antiguo' ? 'selected' : '' }}>Más antiguos primero</option>
@@ -40,7 +45,7 @@
       </div>
     </aside>
 
-    <section class="col-md-9">
+    <section class="col-md-8">
       <div class="mb-3">
         <span class="fw-bold">Resultados {{ $publicaciones->total() }}</span>
       </div>
@@ -49,9 +54,11 @@
           <div class="col-md-4">
             <div class="card card-publicacion h-100">
               @php
-                $isVideo = ($publicacion->tipo ?? '') === 'video';
+                $tipoArchivo = strtolower((string) ($publicacion->tipo ?? ''));
+                $isVideo = in_array($tipoArchivo, ['video', 'mp4'], true);
                 $portadaUrl = null;
-                $fallbackImg = 'imagenes/icopdf.png';
+                $portadaDisponible = false;
+                $fallbackImg = 'imagenes/icopdf.svg';
                 if ($isVideo) {
                   $encoded = implode('/', array_map('rawurlencode', explode('/', 'imagenes/youtube.png')));
                   $portadaUrl = url('/' . $encoded);
@@ -61,13 +68,23 @@
 
                   if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
                     $portadaUrl = $p;
+                    $portadaDisponible = true;
                   } else {
                     $p = ltrim($p, '/');
-                    $p = str_starts_with($p, 'imagenes/') ? $p : 'imagenes/' . $p;
-                    $exists = file_exists(public_path($p));
-                    $safePath = $exists ? $p : $fallbackImg;
-                    $encoded = implode('/', array_map('rawurlencode', explode('/', $safePath)));
-                    $portadaUrl = url('/' . $encoded);
+                    if (str_ends_with($p, 'icopdf.png')) {
+                      $p = 'imagenes/icopdf.svg';
+                    }
+                    if (str_starts_with($p, 'imagenes/')) {
+                      $exists = file_exists(public_path($p));
+                      $safePath = $exists ? $p : $fallbackImg;
+                      $portadaDisponible = $exists;
+                      $encoded = implode('/', array_map('rawurlencode', explode('/', $safePath)));
+                      $portadaUrl = url('/' . $encoded);
+                    } else {
+                      $exists = file_exists(storage_path('app/public/' . $p));
+                      $portadaUrl = $exists ? asset('storage/' . $p) : null;
+                      $portadaDisponible = $exists;
+                    }
                   }
                 }
 
@@ -76,38 +93,87 @@
                   $portadaUrl = url('/' . $encoded);
                 }
 
-                $link = $publicacion->external_url;
-                if (empty($link) && !empty($publicacion->file_path)) {
-                  $f = $publicacion->file_path;
+                $link = null;
+                if (!empty($publicacion->file_path)) {
+                  $f = trim((string) $publicacion->file_path);
                   if (str_starts_with($f, 'http')) {
                     $link = $f;
                   } else {
                     $candidate = ltrim($f, '/');
-                    $exists = file_exists(public_path($candidate));
-                    $link = $exists ? url('/' . $candidate) : null;
+                    $exists = file_exists(storage_path('app/public/' . $candidate));
+                    $link = $exists ? asset('storage/' . $candidate) : null;
                   }
                 }
 
-                if (empty($link) && ($publicacion->tipo ?? '') === 'ilustraciones' && !empty($portadaUrl)) {
+                if (empty($link) && ($publicacion->ambito ?? '') === 'ilustracion' && $portadaDisponible) {
                   $link = $portadaUrl;
                 }
+
+                // Acepta las variantes habituales de enlaces de YouTube y
+                // obtiene únicamente el ID necesario para el reproductor.
+                $youtubeId = null;
+                if (!empty($link)) {
+                  $youtubeUrl = parse_url($link);
+                  $youtubeHost = strtolower($youtubeUrl['host'] ?? '');
+                  $youtubeHost = preg_replace('/^www\./', '', $youtubeHost);
+                  $youtubePath = trim($youtubeUrl['path'] ?? '', '/');
+
+                  if ($youtubeHost === 'youtu.be') {
+                    $youtubeId = explode('/', $youtubePath)[0] ?? null;
+                  } elseif (in_array($youtubeHost, ['youtube.com', 'm.youtube.com', 'music.youtube.com'], true)) {
+                    parse_str($youtubeUrl['query'] ?? '', $youtubeQuery);
+                    if ($youtubePath === 'watch') {
+                      $youtubeId = $youtubeQuery['v'] ?? null;
+                    } elseif (preg_match('#^(?:embed|shorts|live)/([^/?]+)#', $youtubePath, $youtubeMatch)) {
+                      $youtubeId = $youtubeMatch[1];
+                    }
+                  }
+
+                  if (!is_string($youtubeId) || !preg_match('/^[A-Za-z0-9_-]{11}$/', $youtubeId)) {
+                    $youtubeId = null;
+                  }
+                }
+
+                $isVideo = $isVideo || $youtubeId !== null;
               @endphp
 
-              @if($portadaUrl)
+              @if($youtubeId)
+                <div class="position-relative">
+                  <img
+                    src="https://i.ytimg.com/vi/{{ $youtubeId }}/maxresdefault.jpg"
+                    class="card-img-top portada-img"
+                    alt="Miniatura de {{ $publicacion->titulo }}"
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/{{ $youtubeId }}/hqdefault.jpg';">
+                  <button type="button"
+                    class="btn btn-gob position-absolute rounded-circle js-video-preview"
+                    data-video-id="{{ $youtubeId }}"
+                    data-video-title="{{ $publicacion->titulo }}"
+                    aria-label="Reproducir {{ $publicacion->titulo }}"
+                    style="width:54px;height:54px;font-size:1.35rem;line-height:1;top:50%;left:50%;transform:translate(-50%,-50%);">
+                    &#9654;
+                  </button>
+                </div>
+              @elseif($portadaUrl)
                 <img src="{{ $portadaUrl }}" class="card-img-top portada-img" alt="{{ $publicacion->titulo }}" onload="if (this.naturalHeight && this.naturalHeight < 400) { this.classList.add('img-small'); }">
               @endif
               <div class="card-body d-flex flex-column">
                 <h6 class="card-title text-gob fw-bold">{{ $publicacion->titulo }}</h6>
                 <p class="text-gob small mb-2">Año: {{ $publicacion->year }}</p>
                 <p class="text-gob small mb-2">Ámbito: {{ $publicacion->ambito ?? '—' }}</p>
-                @if(!empty($link))
-                  @if(($publicacion->tipo ?? '') === 'ilustraciones')
+                @if($youtubeId)
+                  <button type="button"
+                    class="mt-auto btn btn-outline-gob btn-sm js-video-preview"
+                    data-video-id="{{ $youtubeId }}"
+                    data-video-title="{{ $publicacion->titulo }}">Abrir</button>
+                @elseif(!empty($link))
+                  @if(($publicacion->ambito ?? '') === 'ilustracion')
                     <a href="{{ $link }}" class="mt-auto btn btn-outline-gob btn-sm js-image-preview" data-image="{{ $link }}">Abrir</a>
                   @else
                     <a href="{{ $link }}" target="_blank" rel="noopener" class="mt-auto btn btn-outline-gob btn-sm">Abrir</a>
                   @endif
                 @else
-                  <button class="mt-auto btn btn-outline-secondary btn-sm" disabled>Archivo no disponible</button>
+                  <span class="mt-auto text-muted small text-center" role="status">Archivo no disponible</span>
                 @endif
               </div>
             </div>
@@ -125,8 +191,8 @@
   </div>
 </main>
 
-<!-- Botón flotante en esquina inferior izquierda -->
-<a href="{{ route('colaborador') }}" class="btn btn-gob" style="position: fixed; bottom: 20px; left: 20px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+<!-- Botón flotante en esquina inferior derecha -->
+<a href="{{ route('colaborador') }}" class="btn btn-gob" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
   Hacerme colaborador
 </a>
 
@@ -135,6 +201,26 @@
     <div class="modal-content">
       <div class="modal-body p-2">
         <img id="imagenModalImg" src="" alt="Ilustracion" class="img-fluid w-100">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="videoModalTitle">Video</h5>
+        <button type="button" class="btn-close close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="ratio ratio-16x9">
+          <iframe id="videoModalIframe" src="" title="Reproductor de video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
       </div>
     </div>
   </div>
@@ -148,16 +234,52 @@
     const modalImg = document.getElementById('imagenModalImg');
     if (!modalEl || !modalImg) return;
 
-    const modal = new bootstrap.Modal(modalEl);
     document.querySelectorAll('.js-image-preview').forEach(link => {
       link.addEventListener('click', event => {
         event.preventDefault();
         const src = link.getAttribute('data-image');
         if (!src) return;
         modalImg.src = src;
-        modal.show();
+
+        if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+          window.jQuery(modalEl).modal('show');
+        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+          const modal = new bootstrap.Modal(modalEl);
+          modal.show();
+        } else {
+          window.open(src, '_blank');
+        }
       });
     });
+
+    const videoModalEl = document.getElementById('videoModal');
+    const videoIframe = document.getElementById('videoModalIframe');
+    const videoTitle = document.getElementById('videoModalTitle');
+
+    if (videoModalEl && videoIframe) {
+      const stopVideo = () => { videoIframe.src = ''; };
+
+      document.querySelectorAll('.js-video-preview').forEach(button => {
+        button.addEventListener('click', () => {
+          const videoId = button.getAttribute('data-video-id');
+          if (!videoId) return;
+
+          videoTitle.textContent = button.getAttribute('data-video-title') || 'Video';
+          videoIframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`;
+
+          if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+            window.jQuery(videoModalEl).modal('show');
+          } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(videoModalEl).show();
+          }
+        });
+      });
+
+      videoModalEl.addEventListener('hidden.bs.modal', stopVideo);
+      if (window.jQuery) {
+        window.jQuery(videoModalEl).on('hidden.bs.modal', stopVideo);
+      }
+    }
   });
 </script>
 @endpush

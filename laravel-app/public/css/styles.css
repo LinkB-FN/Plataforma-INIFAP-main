@@ -15,6 +15,108 @@ body {
   padding: 0.4rem 0;
 }
 
+/* Masthead oficial: permanece fijo mientras la subnavegacion sigue el scroll. */
+.navbar.navbar-fixed-top:not(.inifap-subnav),
+.navbar.fixed-top:not(.inifap-subnav),
+.navbar.navbar-inverse:not(.inifap-subnav) {
+  background-color: #540026 !important;
+  border-color: #3f001c !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+.navbar.navbar-fixed-top:not(.inifap-subnav) > .container,
+.navbar.fixed-top:not(.inifap-subnav) > .container,
+.navbar.navbar-inverse:not(.inifap-subnav) > .container {
+  height: 64px !important;
+  min-height: 64px !important;
+}
+
+.navbar.navbar-fixed-top:not(.inifap-subnav) .navbar-collapse,
+.navbar.navbar-fixed-top:not(.inifap-subnav) .navbar-nav,
+.navbar.fixed-top:not(.inifap-subnav) .navbar-collapse,
+.navbar.fixed-top:not(.inifap-subnav) .navbar-nav,
+.navbar.navbar-inverse:not(.inifap-subnav) .navbar-collapse,
+.navbar.navbar-inverse:not(.inifap-subnav) .navbar-nav {
+  background-color: #540026 !important;
+}
+
+.navbar.navbar-fixed-top:not(.inifap-subnav) a,
+.navbar.fixed-top:not(.inifap-subnav) a,
+.navbar.navbar-inverse:not(.inifap-subnav) a {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+.navbar.navbar-fixed-top:not(.inifap-subnav) .navbar-brand img,
+.navbar.fixed-top:not(.inifap-subnav) .navbar-brand img,
+.navbar.navbar-inverse:not(.inifap-subnav) .navbar-brand img {
+  max-height: 40px !important;
+  width: auto !important;
+}
+
+/* El framework gob.mx aplica position:fixed a la clase base .navbar
+   (pensada para su propio masthead). La anulamos aquí para que nuestro
+   sub-navbar fluya de forma normal bajo el masthead oficial, y anulamos
+   también el margin/padding-top que el framework agrega al body para
+   compensar SU masthead (nos deja un hueco en blanco antes del nuestro). */
+body {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.inifap-subnav {
+  background-color: #3f001c !important;
+  position: relative !important;
+  top: auto !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  margin-top: 64px;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.inifap-subnav > .container-fluid {
+  height: 38px !important;
+  min-height: 38px !important;
+}
+
+/* Hide the mobile toggler and empty brand on desktop — they cause the white box */
+.inifap-subnav .navbar-toggler,
+.inifap-subnav .navbar-brand {
+  display: none !important;
+}
+
+/* Keep nav items on a single line */
+.inifap-subnav .navbar-collapse {
+  height: 38px !important;
+  min-height: 38px !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+}
+
+.inifap-subnav .navbar-nav {
+  height: 38px !important;
+  align-items: center !important;
+  flex-wrap: nowrap;
+  flex-direction: row !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.inifap-subnav .nav-link,
+.inifap-subnav .subnav-link {
+  padding: 0.2rem 0.45rem !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
 .header-bottom .nav-link {
   font-weight: 500;
   color: #fff !important;
@@ -40,6 +142,150 @@ body {
 
 .btn-gob:hover {
   background-color: #60042E;
+}
+
+.btn-outline-gob {
+  background-color: transparent;
+  color: #801436;
+  border: 1px solid #801436;
+  /* El framework gob.mx trae varias definiciones conflictivas de .btn que
+     terminan forzando un ancho fijo demasiado angosto para el texto real. */
+  display: inline-block !important;
+  width: auto !important;
+  min-width: max-content !important;
+  white-space: nowrap;
+}
+
+.btn-outline-gob:hover {
+  background-color: #801436;
+  color: #fff;
+}
+
+/* INICIO DE SESION */
+.login-page {
+  min-height: 520px;
+}
+
+.login-card {
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(56, 31, 40, 0.12);
+}
+
+.login-intro {
+  position: relative;
+  padding: 3rem 2.5rem;
+  color: #fff;
+  background: linear-gradient(145deg, #801436 0%, #60042e 100%);
+}
+
+.login-intro::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  bottom: -55px;
+  width: 170px;
+  height: 170px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+}
+
+.login-kicker {
+  margin-bottom: 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.login-intro h1 {
+  margin-bottom: 1rem;
+  font-size: 1.7rem;
+  line-height: 1.25;
+}
+
+.login-intro p {
+  line-height: 1.6;
+  opacity: 0.88;
+}
+
+.login-back-link {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  margin-top: 1.25rem;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-back-link:hover,
+.login-back-link:focus {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.login-form-panel {
+  padding: 3rem;
+}
+
+.login-form-panel .form-control {
+  min-height: 46px;
+  border-radius: 5px;
+}
+
+.login-form-panel .form-control:focus {
+  border-color: #801436;
+  box-shadow: 0 0 0 0.2rem rgba(128, 20, 54, 0.15);
+}
+
+.login-submit {
+  min-height: 46px;
+  font-weight: 600;
+}
+
+.login-mobile-back {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .login-intro {
+    padding: 2rem;
+  }
+
+  .login-intro p,
+  .login-back-link {
+    display: none;
+  }
+
+  .login-intro h1 {
+    margin-bottom: 0;
+    font-size: 1.4rem;
+  }
+
+  .login-form-panel {
+    padding: 2rem 1.5rem;
+  }
+
+  .login-mobile-back {
+    display: block;
+  }
+
+  .login-mobile-back a {
+    color: #801436;
+    font-weight: 600;
+  }
+}
+
+/* El framework gob.mx incluye su propio bundle de bootstrap-icons, pero una
+   regla .btn::before{content:""} más adelante en ese mismo archivo vacía el
+   glifo de cualquier ícono anidado dentro de un botón. Se restaura aquí. */
+.btn-outline-gob .bi-instagram::before {
+  content: "\f437" !important;
+}
+
+.btn-outline-gob .bi-github::before {
+  content: "\f3ed" !important;
 }
 
 /* CARD DE PUBLICACIÓN */
@@ -84,4 +330,121 @@ footer {
 .publicaciones-paginacion .page-link {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
+}
+.subscription-card {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.subscription-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: #f7f7f7;
+  color: #333;
+  text-align: left;
+}
+
+.subscription-toggle:hover,
+.subscription-toggle:focus {
+  background: #eee;
+  outline: 2px solid transparent;
+}
+
+.subscription-toggle small,
+.subscription-help {
+  display: block;
+  color: #666;
+  font-size: 12px;
+}
+
+.subscription-icon {
+  color: #611232;
+  font-size: 20px;
+}
+
+.subscription-form {
+  padding: 14px;
+  border-top: 1px solid #ddd;
+}
+
+.subscription-form .form-label,
+.subscription-form legend {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subscription-form legend {
+  border: 0;
+}
+
+.subscription-error {
+  margin-top: 5px;
+  color: #a94442;
+  font-size: 12px;
+}
+
+.subscription-help {
+  margin-top: 8px;
+  line-height: 1.35;
+}
+
+.topic-picker {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.topic-picker summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+
+.topic-picker summary::-webkit-details-marker {
+  display: none;
+}
+
+.topic-picker summary::after {
+  content: '▾';
+  margin-left: 8px;
+  color: #611232;
+}
+
+.topic-picker[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.topic-picker-hint {
+  margin-left: auto;
+  color: #777;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.topic-picker-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 190px;
+  margin: 0;
+  padding: 10px;
+  overflow-y: auto;
+  border: 0;
+  border-top: 1px solid #ddd;
+}
+
+.topic-picker-options .form-check {
+  margin-bottom: 6px;
+  font-size: 13px;
 }

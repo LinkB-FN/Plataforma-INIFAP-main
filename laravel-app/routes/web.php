@@ -6,6 +6,7 @@ use App\Http\Controllers\PublicacionController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\SuscripcionController;
 
 // Home: mostrar publicaciones
 Route::get('/', [PublicacionController::class, 'index'])->name('home');
@@ -15,6 +16,9 @@ Route::get('/colaborador', function() { return view('contribuyente'); })->name('
 Route::get('/contribuyente', function() { return redirect()->route('colaborador'); });
 Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
 Route::get('/publicaciones/listar', [PublicacionController::class, 'listarTodas'])->name('publicaciones.listar');
+Route::post('/suscripciones', [SuscripcionController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('suscripciones.store');
 
 Route::get('/pub_tecnicas', function(){ return view('pub_tecnicas'); })->name('pub_tecnicas');
 Route::get('/desarrolladores', function(){ return view('desarrolladores'); })->name('desarrolladores');
@@ -87,4 +91,3 @@ Route::post('/files', [FileController::class, 'store'])->name('files.store');
 Route::get('/files', [FileController::class, 'index'])->name('files.index');
 Route::get('/files/{id}/download', [FileController::class, 'download'])->name('files.download');
 Route::delete('/files/{id}', [FileController::class, 'destroy'])->name('files.destroy');
-

@@ -1,6 +1,6 @@
 @extends('admin.dashboard')
 
-@section('content')
+@section('content_inner')
 <h2>Lista de Publicaciones</h2>
 <hr>
 

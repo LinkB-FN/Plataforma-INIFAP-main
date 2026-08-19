@@ -1,111 +1,65 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Administrador - INIFAP</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            height: 100vh;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-container {
-            background: #fff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .login-header h2 {
-            margin: 0;
-            color: #2c3e50;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #34495e;
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccd1d9;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: #2980b9;
-            border: none;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .btn-submit:hover {
-            background: #2471a3;
-        }
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h2>Acceso Seguro</h2>
-            <p style="color: #7f8c8d; font-size: 14px;">Panel de Administración INIFAP</p>
+@extends('layouts.app')
+
+@section('title', 'Iniciar sesión')
+
+@section('content')
+<main class="login-page py-4 py-md-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-8">
+            <div class="card login-card border-0 overflow-hidden">
+                <div class="row g-0">
+                    <div class="col-md-5 login-intro d-flex flex-column justify-content-center">
+                        <span class="login-kicker">Biblioteca digital</span>
+                        <h1>INIFAP C.E. Zacatecas</h1>
+                        <p>Acceso al panel para administrar las publicaciones y recursos de la biblioteca.</p>
+                        <a href="{{ route('home') }}" class="login-back-link">
+                            <span aria-hidden="true">&larr;</span> Volver a la biblioteca
+                        </a>
+                    </div>
+
+                    <div class="col-md-7 bg-white">
+                        <div class="login-form-panel">
+                            <h2 class="text-gob fw-bold mb-2">Iniciar sesión</h2>
+                            <p class="text-muted mb-4">Ingresa con tus credenciales institucionales.</p>
+
+                            @if ($errors->any())
+                                <div class="alert alert-danger" role="alert">
+                                    {{ $errors->first() }}
+                                </div>
+                            @endif
+
+                            <form method="POST" action="{{ route('admin.login.post') }}">
+                                @csrf
+
+                                <div class="mb-3">
+                                    <label for="email" class="form-label fw-semibold">Correo electrónico</label>
+                                    <input type="email" id="email" name="email"
+                                           class="form-control @error('email') is-invalid @enderror"
+                                           value="{{ old('email') }}" placeholder="usuario@inifap.gob.mx"
+                                           autocomplete="username" required autofocus>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="password" class="form-label fw-semibold">Contraseña</label>
+                                    <input type="password" id="password" name="password"
+                                           class="form-control @error('password') is-invalid @enderror"
+                                           placeholder="Ingresa tu contraseña"
+                                           autocomplete="current-password" required>
+                                </div>
+
+                                <button type="submit" class="btn btn-gob w-100 login-submit">
+                                    Ingresar al panel
+                                </button>
+                            </form>
+
+                            <div class="login-mobile-back text-center mt-4">
+                                <a href="{{ route('home') }}">&larr; Volver a la biblioteca</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        @if ($errors->any())
-            <div class="error-message">
-                @foreach ($errors->all() as $error)
-                    <div>{{ $error }}</div>
-                @endforeach
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('admin.login.post') }}">
-            @csrf
-            <div class="form-group">
-                <label for="email">Correo Electrónico</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-
-            <button type="submit" class="btn-submit">Ingresar al Panel</button>
-        </form>
     </div>
-</body>
-</html>
+</main>
+@endsection

@@ -1,6 +1,6 @@
 @extends('admin.dashboard')
 
-@section('content')
+@section('content_inner')
 <div class="max-w-3xl mx-auto bg-white dark:bg-[#161615] rounded-lg border border-[#e3e3e0] dark:border-[#3E3E3A] shadow-sm overflow-hidden">
     <div class="px-6 py-5 border-b border-[#e3e3e0] dark:border-[#3E3E3A]">
         <h3 class="text-lg font-medium text-[#1b1b18] dark:text-white">

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Publicacion;
 use Illuminate\Support\Facades\Log;
+use App\Services\NotificadorSuscripciones;
 
 class AdminPublicacionController extends Controller
 {
@@ -41,7 +42,7 @@ class AdminPublicacionController extends Controller
         return view('admin.publicaciones_form', compact('tipos'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NotificadorSuscripciones $notificador)
     {
         $request->validate([
             'titulo' => 'required|string|max:255',
@@ -126,6 +127,7 @@ class AdminPublicacionController extends Controller
             ]);
 
             DB::commit();
+            $notificador->notificar($publicacion);
             return redirect()->route('admin.publicaciones.index')->with('success', 'Publicación creada correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
