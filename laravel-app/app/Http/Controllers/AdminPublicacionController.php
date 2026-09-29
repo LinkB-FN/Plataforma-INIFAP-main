@@ -11,9 +11,16 @@ use App\Services\NotificadorSuscripciones;
 
 class AdminPublicacionController extends Controller
 {
+    public function __construct(private \App\Services\PermisosPublicaciones $permisos)
+    {
+    }
+
     public function index()
     {
+        $tipos = $this->permisos->tiposPermitidos('ver');
+        abort_if($tipos->isEmpty(), 403);
         $publicaciones = DB::table('publicaciones as p')
+            ->whereIn('p.id_tipo', $tipos->pluck('id'))
             ->join('tipos_publicacion as tp', 'p.id_tipo', '=', 'tp.id')
             ->leftJoin('archivos as a', function($join) {
                 $join->on('p.id', '=', 'a.id_publicacion')
@@ -38,106 +45,26 @@ class AdminPublicacionController extends Controller
 
     public function create()
     {
-        $tipos = DB::table('tipos_publicacion')->get();
+        $tipos = $this->permisos->tiposPermitidos('crear');
+        abort_if($tipos->isEmpty(), 403);
         return view('admin.publicaciones_form', compact('tipos'));
+    }
+
+    public function legacyCreate()
+    {
+        abort_if($this->permisos->tiposPermitidos('crear')->isEmpty(), 403);
+        return redirect()->route('admin.publicaciones.create');
     }
 
     public function store(Request $request, NotificadorSuscripciones $notificador)
     {
-        $request->validate([
-            'titulo' => 'required|string|max:255',
-            'year' => 'nullable|integer',
-            'tipo_formato' => 'nullable|string|max:50',
-            'portada' => 'nullable|image|max:5120', // 5 MB
-            'file' => 'nullable|file',
-            'external_url' => 'nullable|url',
-            'tipo_publicacion' => 'required|exists:tipos_publicacion,clave'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $filePath = null;
-            $portadaPath = null;
-            $categoriaMedio = 'documento';
-            $formato = $request->input('tipo_formato') ?: 'pdf';
-
-            // handle portada image
-            if ($request->hasFile('portada')) {
-                $portadaPath = $request->file('portada')->store('uploads/portadas', 'public');
-            }
-
-            // handle main file with custom size checks depending on mime
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $ext = strtolower($file->getClientOriginalExtension());
-                $size = $file->getSize();
-
-                $limits = [
-                    'pdf' => 20 * 1024 * 1024,
-                    'mp3' => 20 * 1024 * 1024,
-                    'mp4' => 200 * 1024 * 1024,
-                    'jpg' => 5 * 1024 * 1024,
-                    'jpeg' => 5 * 1024 * 1024,
-                    'png' => 5 * 1024 * 1024,
-                ];
-
-                if (isset($limits[$ext]) && $size > $limits[$ext]) {
-                    return back()->withInput()->withErrors(['file' => 'El archivo excede el tamaño máximo permitido.']);
-                }
-
-                $allowed = array_keys($limits);
-                if (!in_array($ext, $allowed)) {
-                    return back()->withInput()->withErrors(['file' => 'Tipo de archivo no permitido.']);
-                }
-
-                $filePath = $file->store('uploads/files', 'public');
-                $formato = $ext;
-                if (in_array($ext, ['mp4'])) $categoriaMedio = 'video';
-                if (in_array($ext, ['jpg','jpeg','png'])) $categoriaMedio = 'imagen';
-            } elseif ($request->input('external_url')) {
-                $filePath = $request->input('external_url');
-                if (strpos($filePath, 'youtube') !== false) {
-                    $categoriaMedio = 'video';
-                    $formato = 'mp4';
-                }
-            }
-
-            $tipoId = DB::table('tipos_publicacion')->where('clave', $request->input('tipo_publicacion'))->value('id');
-
-            $publicacion = Publicacion::create([
-                'id_tipo' => $tipoId,
-                'titulo' => $request->input('titulo'),
-                'titulo_en' => null,
-                'ano' => $request->input('year') ?: date('Y'),
-                'url_imagen' => $portadaPath,
-                'id_autor' => Auth::id(),
-                'muestra' => true,
-                'activo' => true,
-                'creado_en' => now(),
-                'actualizado_en' => now()
-            ]);
-
-            DB::table('archivos')->insert([
-                'id_publicacion' => $publicacion->id,
-                'categoria_medio' => $categoriaMedio,
-                'formato' => $formato,
-                'url_archivo' => $filePath ?? '#',
-                'es_principal' => true,
-                'creado_en' => now()
-            ]);
-
-            DB::commit();
-            $notificador->notificar($publicacion);
-            return redirect()->route('admin.publicaciones.index')->with('success', 'Publicación creada correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al guardar publicación: ' . $e->getMessage());
-            return back()->withInput()->withErrors(['error' => 'Hubo un problema al guardar la publicación.']);
-        }
+        $this->permisos->autorizar((string) $request->input('tipo_publicacion', ''), 'crear');
+        return $this->guardarPublicacion($request, new Publicacion(), $notificador);
     }
 
     public function edit($id)
     {
+        $this->permisos->autorizar($this->permisos->tipoDePublicacion($id), 'editar');
         $publicacion = DB::table('publicaciones as p')
             ->join('tipos_publicacion as tp', 'p.id_tipo', '=', 'tp.id')
             ->leftJoin('archivos as a', function($join) {
@@ -156,102 +83,105 @@ class AdminPublicacionController extends Controller
             return redirect()->route('admin.publicaciones.index')->withErrors(['error' => 'Publicación no encontrada.']);
         }
 
-        $tipos = DB::table('tipos_publicacion')->get();
+        $tipos = $this->permisos->tiposPermitidos('editar');
         return view('admin.publicaciones_form', compact('publicacion', 'tipos'));
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'titulo' => 'required|string|max:255',
-            'year' => 'nullable|integer',
-            'tipo_formato' => 'nullable|string|max:50',
-            'portada' => 'nullable|image|max:5120', // 5 MB
-            'file' => 'nullable|file',
-            'external_url' => 'nullable|url',
-            'tipo_publicacion' => 'required|exists:tipos_publicacion,clave'
-        ]);
+        $this->permisos->autorizar($this->permisos->tipoDePublicacion($id), 'editar');
+        $this->permisos->autorizar((string) $request->input('tipo_publicacion', ''), 'editar');
+        return $this->guardarPublicacion($request, Publicacion::findOrFail($id));
+    }
 
-        $pubModel = Publicacion::find($id);
-        if (!$pubModel) {
-            return redirect()->route('admin.publicaciones.index')->withErrors(['error' => 'Publicación no encontrada.']);
-        }
+    private function guardarPublicacion(Request $request, Publicacion $publicacion, ?NotificadorSuscripciones $notificador = null)
+    {
+        $archivos = app(\App\Services\ArchivosPublicacion::class);
+        $nuevo = !$publicacion->exists;
+        $actual = $nuevo ? null : DB::table('archivos')
+            ->where('id_publicacion', $publicacion->id)->where('es_principal', true)->first();
+        $puedeConservar = $actual && $actual->url_archivo && $actual->url_archivo !== '#';
+        $datos = $archivos->validar($request, (bool) $puedeConservar);
+        $nuevasRutas = [];
+        $obsoletas = [];
 
-        DB::beginTransaction();
         try {
-            $tipoId = DB::table('tipos_publicacion')->where('clave', $request->input('tipo_publicacion'))->value('id');
-
-            $updateData = [
-                'id_tipo' => $tipoId,
-                'titulo' => $request->input('titulo'),
-                'ano' => $request->input('year') ?: date('Y'),
-                'actualizado_en' => now()
+            $cambios = [
+                'id_tipo' => DB::table('tipos_publicacion')->where('clave', $datos['tipo_publicacion'])->value('id'),
+                'titulo' => $datos['titulo'],
+                'ano' => $datos['year'],
+                'actualizado_en' => now(),
             ];
-
+            if ($nuevo) {
+                $cambios += ['id_autor' => Auth::id(), 'muestra' => true, 'activo' => true, 'creado_en' => now()];
+            }
             if ($request->hasFile('portada')) {
-                $updateData['url_imagen'] = $request->file('portada')->store('uploads/portadas', 'public');
+                $cambios['url_imagen'] = $archivos->guardar($request->file('portada'), 'uploads/portadas');
+                $nuevasRutas[] = $cambios['url_imagen'];
+                $obsoletas[] = $publicacion->url_imagen;
+            }
+            $contenido = null;
+            if ($datos['origen'] === 'archivo') {
+                $ruta = $archivos->guardar($request->file('file'), 'uploads/files');
+                $nuevasRutas[] = $ruta;
+                $contenido = $archivos->datosArchivo($ruta, $request->file('file')->extension());
+            } elseif ($datos['origen'] === 'enlace') {
+                $contenido = $archivos->datosEnlace($datos['external_url']);
+            }
+            if ($contenido !== null) {
+                $obsoletas[] = $actual->url_archivo ?? null;
             }
 
-            $pubModel->update($updateData);
-
-            // Handle file update if provided
-            if ($request->hasFile('file') || $request->input('external_url')) {
-                $filePath = null;
-                $categoriaMedio = 'documento';
-                $formato = $request->input('tipo_formato') ?: 'pdf';
-
-                if ($request->hasFile('file')) {
-                    $file = $request->file('file');
-                    $ext = strtolower($file->getClientOriginalExtension());
-                    $filePath = $file->store('uploads/files', 'public');
-                    $formato = $ext;
-                    if (in_array($ext, ['mp4'])) $categoriaMedio = 'video';
-                    if (in_array($ext, ['jpg','jpeg','png'])) $categoriaMedio = 'imagen';
-                } elseif ($request->input('external_url')) {
-                    $filePath = $request->input('external_url');
-                    if (strpos($filePath, 'youtube') !== false) {
-                        $categoriaMedio = 'video';
-                        $formato = 'mp4';
+            DB::transaction(function () use ($publicacion, $cambios, $contenido, $actual) {
+                $publicacion->fill($cambios)->save();
+                if ($contenido !== null) {
+                    $contenido['actualizado_en'] = now();
+                    if ($actual) {
+                        DB::table('archivos')->where('id', $actual->id)->update($contenido);
+                    } else {
+                        DB::table('archivos')->insert($contenido + [
+                            'id_publicacion' => $publicacion->id, 'es_principal' => true, 'creado_en' => now(),
+                        ]);
                     }
                 }
-
-                DB::table('archivos')->updateOrInsert(
-                    ['id_publicacion' => $id, 'es_principal' => true],
-                    [
-                        'categoria_medio' => $categoriaMedio,
-                        'formato' => $formato,
-                        'url_archivo' => $filePath,
-                        'actualizado_en' => now()
-                    ]
-                );
-            }
-
-            DB::commit();
-            return redirect()->route('admin.publicaciones.index')->with('success', 'Publicación actualizada correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al actualizar publicación: ' . $e->getMessage());
-            return back()->withInput()->withErrors(['error' => 'Hubo un problema al actualizar la publicación.']);
+            });
+        } catch (\Throwable $e) {
+            $archivos->limpiar($nuevasRutas);
+            Log::error('Error al guardar publicación.', ['error' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => 'No se pudo guardar la publicación. Inténtalo de nuevo; si elegiste archivos, vuelve a seleccionarlos.']);
         }
+
+        $archivos->limpiar($obsoletas);
+        if ($notificador) {
+            try {
+                $notificador->notificar($publicacion);
+            } catch (\Throwable $e) {
+                Log::warning('Publicación guardada, pero falló la notificación.', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return redirect()->route('admin.dashboard')->with('success',
+            $nuevo ? 'Publicación creada correctamente.' : 'Publicación actualizada correctamente.');
     }
 
     public function destroy($id)
     {
-        $pub = Publicacion::find($id);
-        if (!$pub) {
-            return redirect()->route('admin.publicaciones.index')->withErrors(['error' => 'Publicación no encontrada.']);
+        $this->permisos->autorizar($this->permisos->tipoDePublicacion($id), 'borrar');
+        $publicacion = Publicacion::findOrFail($id);
+        $rutas = DB::table('archivos')->where('id_publicacion', $id)->pluck('url_archivo')->all();
+        $rutas[] = $publicacion->url_imagen;
+
+        try {
+            DB::transaction(function () use ($publicacion, $id) {
+                DB::table('archivos')->where('id_publicacion', $id)->delete();
+                $publicacion->delete();
+            });
+        } catch (\Throwable $e) {
+            Log::error('Error al eliminar publicación.', ['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'No se pudo eliminar la publicación.']);
         }
 
-        DB::beginTransaction();
-        try {
-            DB::table('archivos')->where('id_publicacion', $id)->delete();
-            $pub->delete();
-            DB::commit();
-            return redirect()->route('admin.publicaciones.index')->with('success', 'Publicación eliminada correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error al eliminar publicación: ' . $e->getMessage());
-            return redirect()->route('admin.publicaciones.index')->withErrors(['error' => 'Error al eliminar la publicación.']);
-        }
+        app(\App\Services\ArchivosPublicacion::class)->limpiar($rutas);
+        return redirect()->route('admin.dashboard')->with('success', 'Publicación eliminada correctamente.');
     }
 }

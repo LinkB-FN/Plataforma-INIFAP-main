@@ -19,7 +19,7 @@ class CheckModuloPermiso
         $userId = Auth::id();
         $res = DB::select('SELECT fn_tiene_permiso(?, ?, ?) as permiso', [$userId, $modulo, $accion]);
         
-        if (!$res[0]->permiso) {
+        if (!filter_var($res[0]->permiso ?? false, FILTER_VALIDATE_BOOLEAN)) {
             abort(403, 'No tienes permiso para ' . $accion . ' en el módulo ' . $modulo);
         }
 

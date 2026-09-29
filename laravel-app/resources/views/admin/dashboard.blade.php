@@ -3,8 +3,9 @@
 @section('title', '| Panel de Administración')
 
 @section('content')
+@inject('permisosPublicaciones', 'App\Services\PermisosPublicaciones')
 <div class="container">
-    <div class="row">
+    <div class="row admin-workspace">
         <div class="col-sm-9">
             @if(session('success'))
                 <div class="alert alert-success">
@@ -36,7 +37,9 @@
                     <a class="list-group-item" style="text-decoration: none;" href="{{ route('home') }}">&larr; Volver a la Biblioteca</a>
                     <a class="list-group-item" style="text-decoration: none;" href="{{ route('admin.dashboard') }}">Dashboard</a>
                     <a class="list-group-item" style="text-decoration: none;" href="{{ route('admin.publicaciones.index') }}">Lista de Publicaciones</a>
+                    @if($permisosPublicaciones->tiposPermitidos('crear')->isNotEmpty())
                     <a class="list-group-item" style="text-decoration: none;" href="{{ route('admin.publicaciones.create') }}">Subir Documento</a>
+                    @endif
                     <a class="list-group-item" style="text-decoration: none;" href="{{ route('admin.usuarios') }}">Gestión de Usuarios</a>
                 </div>
                 <br>

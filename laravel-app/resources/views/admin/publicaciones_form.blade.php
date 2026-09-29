@@ -1,106 +1,129 @@
 @extends('admin.dashboard')
 
 @section('content_inner')
-<div class="max-w-3xl mx-auto bg-white dark:bg-[#161615] rounded-lg border border-[#e3e3e0] dark:border-[#3E3E3A] shadow-sm overflow-hidden">
-    <div class="px-6 py-5 border-b border-[#e3e3e0] dark:border-[#3E3E3A]">
-        <h3 class="text-lg font-medium text-[#1b1b18] dark:text-white">
-            {{ isset($publicacion) ? 'Editar Publicación' : 'Subir Nueva Publicación' }}
-        </h3>
-        <p class="text-sm text-[#706f6c] dark:text-[#A1A09A] mt-1">Completa el formulario para {{ isset($publicacion) ? 'actualizar' : 'registrar' }} el documento en la biblioteca.</p>
-    </div>
-
-    <form 
-        method="POST" 
-        action="{{ isset($publicacion) ? route('admin.publicaciones.update', $publicacion->id) : route('admin.publicaciones.store') }}" 
-        enctype="multipart/form-data" 
-        class="p-6 space-y-6"
-    >
+@inject('archivosPublicacion', 'App\Services\ArchivosPublicacion')
+@php
+    $editando = isset($publicacion);
+    $actual = $publicacion->file_path ?? '';
+    $conservar = $editando && $actual !== '' && $actual !== '#';
+    $origen = old('origen', $conservar ? 'conservar' : 'archivo');
+    $limites = $archivosPublicacion->limites();
+@endphp
+<div class="publication-upload">
+    <h2>{{ $editando ? 'Editar publicación' : 'Nueva publicación' }}</h2>
+    <p class="text-muted">Agrega los datos y el contenido que estará disponible en la biblioteca.</p>
+    @if($errors->any())
+        <p role="alert">Revisa los campos señalados. Si habías seleccionado archivos, vuelve a elegirlos.</p>
+    @endif
+    <form id="publication-upload-form" method="POST"
+          action="{{ $editando ? route('admin.publicaciones.update', $publicacion->id) : route('admin.publicaciones.store') }}"
+          enctype="multipart/form-data" data-limits="{{ json_encode($limites) }}">
         @csrf
-        @if(isset($publicacion))
-            @method('PUT')
-        @endif
-
-        <!-- Tipo de Publicación -->
-        <div>
-            <label for="tipo_publicacion" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Tipo de Publicación</label>
-            <select id="tipo_publicacion" name="tipo_publicacion" required class="w-full rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white">
-                <option value="" disabled {{ !isset($publicacion) ? 'selected' : '' }}>Selecciona un tipo...</option>
+        @if($editando) @method('PUT') @endif
+        <div class="form-group">
+            <label for="tipo_publicacion">Tipo de publicación</label>
+            <select id="tipo_publicacion" name="tipo_publicacion" class="form-control" required>
+                <option value="">Selecciona un tipo</option>
                 @foreach($tipos as $tipo)
-                    <option value="{{ $tipo->clave }}" 
-                        {{ (isset($publicacion) && $publicacion->tipo_publicacion == $tipo->clave) ? 'selected' : '' }}
-                    >
-                        {{ $tipo->nombre }}
-                    </option>
+                    <option value="{{ $tipo->clave }}" @selected(old('tipo_publicacion', $publicacion->tipo_publicacion ?? '') === $tipo->clave)>{{ $tipo->nombre }}</option>
                 @endforeach
             </select>
+            @error('tipo_publicacion') <span class="help-block text-danger">{{ $message }}</span> @enderror
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Título -->
-            <div class="md:col-span-2">
-                <label for="titulo" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Título de la publicación</label>
-                <input type="text" id="titulo" name="titulo" value="{{ isset($publicacion) ? $publicacion->titulo : old('titulo') }}" required class="w-full rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white">
+        <div class="row">
+            <div class="col-sm-9 form-group">
+                <label for="titulo">Título</label>
+                <input id="titulo" name="titulo" class="form-control" maxlength="255" required value="{{ old('titulo', $publicacion->titulo ?? '') }}">
+                @error('titulo') <span class="help-block text-danger">{{ $message }}</span> @enderror
             </div>
-
-            <!-- Año -->
-            <div>
-                <label for="year" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Año</label>
-                <input type="number" id="year" name="year" value="{{ isset($publicacion) ? $publicacion->year : (old('year') ?? date('Y')) }}" required class="w-full rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white">
+            <div class="col-sm-3 form-group">
+                <label for="year">Año</label>
+                <input type="number" id="year" name="year" class="form-control" min="1000" max="{{ date('Y') + 1 }}" required value="{{ old('year', $publicacion->year ?? date('Y')) }}">
+                @error('year') <span class="help-block text-danger">{{ $message }}</span> @enderror
             </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Formato -->
-            <div>
-                <label for="tipo_formato" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Formato Principal</label>
-                <select id="tipo_formato" name="tipo_formato" class="w-full rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white">
-                    <option value="pdf" {{ (isset($publicacion) && $publicacion->tipo_formato == 'pdf') ? 'selected' : '' }}>PDF</option>
-                    <option value="mp4" {{ (isset($publicacion) && $publicacion->tipo_formato == 'mp4') ? 'selected' : '' }}>Video (MP4)</option>
-                    <option value="png" {{ (isset($publicacion) && in_array($publicacion->tipo_formato, ['png','jpg','jpeg'])) ? 'selected' : '' }}>Imagen (PNG/JPG)</option>
+        <fieldset class="upload-content">
+            <legend>Contenido de la publicación</legend>
+            <div class="form-group">
+                <label for="origen">¿Cómo quieres agregar el contenido?</label>
+                <select id="origen" name="origen" class="form-control">
+                    @if($conservar)
+                        <option value="conservar" @selected($origen === 'conservar')>Conservar contenido actual</option>
+                    @endif
+                    <option value="archivo" @selected($origen === 'archivo')>{{ $editando ? 'Subir un archivo nuevo' : 'Subir un archivo' }}</option>
+                    <option value="enlace" @selected($origen === 'enlace')>Usar un enlace</option>
                 </select>
+                @error('origen') <span class="help-block text-danger">{{ $message }}</span> @enderror
             </div>
-
-            <!-- Portada -->
-            <div>
-                <label for="portada" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Portada (Opcional)</label>
-                <input type="file" id="portada" name="portada" accept="image/*" class="w-full text-sm text-[#706f6c] dark:text-[#A1A09A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#f3f4f6] file:text-[#374151] hover:file:bg-gray-200 dark:file:bg-[#3E3E3A] dark:file:text-[#D1D5DB] dark:hover:file:bg-[#4a4a46] cursor-pointer">
-                @if(isset($publicacion) && $publicacion->portada_path)
-                    <p class="text-xs text-[#706f6c] mt-2">Ya existe una portada. Sube otra para reemplazarla.</p>
-                @endif
-            </div>
-        </div>
-
-        <!-- Archivo Principal -->
-        <div>
-            <label for="file" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">Subir Archivo (PDF, Video o Imagen)</label>
-            <input type="file" id="file" name="file" class="w-full text-sm text-[#706f6c] dark:text-[#A1A09A] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#f3f4f6] file:text-[#374151] hover:file:bg-gray-200 dark:file:bg-[#3E3E3A] dark:file:text-[#D1D5DB] dark:hover:file:bg-[#4a4a46] cursor-pointer">
-            @if(isset($publicacion) && $publicacion->file_path && $publicacion->file_path !== '#')
-                <p class="text-xs text-[#706f6c] mt-2">Archivo actual: 
-                @if(str_starts_with($publicacion->file_path, 'http'))
-                    <a href="{{ $publicacion->file_path }}" target="_blank" class="text-blue-500 hover:underline">Ver Documento</a>.
-                @else
-                    <a href="{{ route('admin.publicaciones.ver', ['path' => $publicacion->file_path]) }}" target="_blank" class="text-blue-500 hover:underline">Ver Documento</a>.
-                @endif
-                Si subes un archivo nuevo, se reemplazará.</p>
+            @if($conservar)
+                <p>Contenido actual:
+                    <a href="{{ preg_match('~^https?://~i', $actual) ? $actual : route('admin.publicaciones.ver', ['path' => $actual]) }}" target="_blank" rel="noopener">Abrir contenido</a>.
+                    Si eliges otro archivo o enlace, reemplazará al actual.
+                </p>
             @endif
+            <div class="form-group" data-source="archivo">
+                <label for="file">Archivo</label>
+                <input type="file" id="file" name="file" accept=".pdf,.mp3,.mp4,.jpg,.jpeg,.png" aria-describedby="file-help file-feedback">
+                <p id="file-help" class="help-block">
+                    PDF y MP3: hasta {{ $limites['pdf'] / 1024 }} MB.
+                    MP4: hasta {{ $limites['mp4'] / 1024 }} MB.
+                    JPG y PNG: hasta {{ $limites['jpg'] / 1024 }} MB.
+                    El formato se detecta automáticamente.
+                </p>
+                <p id="file-feedback" class="help-block" aria-live="polite"></p>
+                @error('file') <span class="help-block text-danger">{{ $message }}</span> @enderror
+            </div>
+            <div class="form-group" data-source="enlace">
+                <label for="external_url">Enlace al contenido</label>
+                <input type="url" id="external_url" name="external_url" class="form-control" maxlength="600"
+                       value="{{ old('external_url', preg_match('~^https?://~i', $actual) ? $actual : '') }}"
+                       placeholder="https://..." aria-describedby="link-help">
+                <p id="link-help" class="help-block">Enlace a un documento, video o sitio web. Por ejemplo, un video de YouTube.</p>
+                @error('external_url') <span class="help-block text-danger">{{ $message }}</span> @enderror
+            </div>
+        </fieldset>
+        <div class="form-group">
+            <label for="portada">Portada <span class="text-muted">(opcional)</span></label>
+            <p class="help-block" id="cover-help">Imagen que aparecerá en la tarjeta de la publicación. JPG, PNG o WebP; máximo 5 MB.</p>
+            <input type="file" id="portada" name="portada" accept=".jpg,.jpeg,.png,.webp" aria-describedby="cover-help">
+            @if(!empty($publicacion->portada_path))
+                <p class="help-block">La portada actual se conserva si no seleccionas otra.</p>
+                <img id="cover-preview" class="upload-preview" alt="Vista previa de la portada"
+                     src="{{ preg_match('~^https?://~i', $publicacion->portada_path) ? $publicacion->portada_path : route('admin.publicaciones.ver', ['path' => $publicacion->portada_path]) }}">
+            @else
+                <img id="cover-preview" class="upload-preview" alt="Vista previa de la portada" hidden>
+            @endif
+            @error('portada') <span class="help-block text-danger">{{ $message }}</span> @enderror
         </div>
-
-        <!-- O URL Externa -->
-        <div>
-            <label for="external_url" class="block text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] mb-1">O URL Externa (ej. enlace de YouTube)</label>
-            <input type="url" id="external_url" name="external_url" value="{{ (isset($publicacion) && strpos($publicacion->file_path, 'http') === 0) ? $publicacion->file_path : old('external_url') }}" placeholder="https://youtube.com/..." class="w-full rounded-md border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#0a0a0a] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white">
-            <p class="text-xs text-[#706f6c] dark:text-[#A1A09A] mt-1">* Si subes un archivo en el campo anterior, se ignorará esta URL.</p>
+        <div class="upload-actions">
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-default">Cancelar</a>
+            <button id="upload-submit" type="submit" class="btn btn-primary">{{ $editando ? 'Guardar cambios' : 'Publicar' }}</button>
         </div>
-
-        <!-- Botones -->
-        <div class="pt-4 flex justify-end gap-3 border-t border-[#e3e3e0] dark:border-[#3E3E3A]">
-            <a href="{{ route('admin.publicaciones.index') }}" class="px-5 py-2 text-sm font-medium text-[#1b1b18] dark:text-[#EDEDEC] border border-[#e3e3e0] dark:border-[#3E3E3A] rounded-md hover:bg-[#dbdbd7] dark:hover:bg-[#3E3E3A] transition-colors">
-                Cancelar
-            </a>
-            <button type="submit" class="px-5 py-2 text-sm font-medium text-white bg-[#1b1b18] hover:bg-black dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:bg-white rounded-md transition-colors">
-                {{ isset($publicacion) ? 'Actualizar' : 'Guardar' }} Publicación
-            </button>
-        </div>
+        <p id="upload-status" role="status" aria-live="polite"></p>
+        <noscript><p>Selecciona un origen y completa solo el campo correspondiente: archivo o enlace.</p></noscript>
     </form>
 </div>
 @endsection
+
+@push('head')
+<style>
+.publication-upload { max-width: 760px; }
+.publication-upload h2 { margin-top: 0; }
+.publication-upload .form-group { margin-bottom: 24px; }
+.publication-upload .upload-content { border: 1px solid #ddd; border-radius: 6px; padding: 18px; margin: 8px 0 24px; min-width: 0; }
+.publication-upload .upload-content legend { width: auto; font-size: 18px; border: 0; padding: 0 8px; margin-bottom: 0; }
+.publication-upload .upload-preview { max-width: 180px; max-height: 180px; margin-top: 12px; object-fit: contain; border: 1px solid #ddd; }
+.publication-upload .upload-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; border-top: 1px solid #ddd; padding-top: 20px; }
+.publication-upload [hidden] { display: none !important; }
+@media (max-width: 991px) {
+    .admin-workspace > .col-sm-9, .admin-workspace > .col-sm-3 { width: 100%; float: none; }
+    .admin-workspace > .col-sm-3 { margin-top: 30px; }
+}
+@media (max-width: 640px) {
+    .publication-upload .row > .form-group { width: 100%; float: none; }
+}
+</style>
+@endpush
+@push('scripts')
+<script src="{{ asset('js/publication-upload.js') }}" defer></script>
+@endpush

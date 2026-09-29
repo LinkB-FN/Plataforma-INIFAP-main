@@ -1,14 +1,17 @@
 @extends('admin.dashboard')
 
 @section('content_inner')
+@inject('permisos', 'App\Services\PermisosPublicaciones')
 <h2>Lista de Publicaciones</h2>
 <hr>
 
 <div class="row" style="margin-bottom: 20px;">
     <div class="col-sm-12 text-right">
+        @if($permisos->tiposPermitidos('crear')->isNotEmpty())
         <a href="{{ route('admin.publicaciones.create') }}" class="btn btn-primary">
             Subir Documento
         </a>
+        @endif
     </div>
 </div>
 
@@ -40,12 +43,16 @@
                                 <a href="{{ route('admin.publicaciones.ver', ['path' => $pub->file_path]) }}" target="_blank" class="btn btn-default btn-sm">Ver</a>
                             @endif
                         @endif
+                        @if($permisos->permite($pub->tipo_publicacion_clave, 'editar'))
                         <a href="{{ route('admin.publicaciones.edit', $pub->id) }}" class="btn btn-primary btn-sm">Editar</a>
+                        @endif
+                        @if($permisos->permite($pub->tipo_publicacion_clave, 'borrar'))
                         <form action="{{ route('admin.publicaciones.destroy', $pub->id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta publicación?');">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger btn-sm">Borrar</button>
                         </form>
+                        @endif
                     </td>
                 </tr>
             @empty

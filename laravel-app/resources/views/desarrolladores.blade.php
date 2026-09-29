@@ -29,7 +29,7 @@
 @endpush
 
 @section('content')
-  <main class="container mt-5 mb-5">
+  <main class="container-fluid mt-5 mb-5">
     <h2 class="text-center text-gob fw-bold mb-4">Desarrolladores de la Página</h2>
     <div class="text-center mb-4">
       <a href="{{ route('home') }}" class="btn btn-outline-gob">Regresar al inicio</a>

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '| INIFAP C.E. Zacatecas')
+@section('title', 'Biblioteca digital')
 
 @section('content')
 <main class="container-fluid mt-4 mb-5">
@@ -31,8 +31,8 @@
               <option value="ilustraciones" {{ request('tipo') == 'ilustraciones' ? 'selected' : '' }}>Imagen</option>
             </select>
             <select name="disponibilidad" class="form-select mb-3" onchange="document.getElementById('filtros-form').submit();">
-              <option value="todos" {{ request('disponibilidad', 'todos') == 'todos' ? 'selected' : '' }}>Cualquier disponibilidad</option>
-              <option value="disponibles" {{ request('disponibilidad') == 'disponibles' ? 'selected' : '' }}>Archivos disponibles</option>
+              <option value="todos" {{ request('disponibilidad', 'disponibles') == 'todos' ? 'selected' : '' }}>Cualquier disponibilidad</option>
+              <option value="disponibles" {{ request('disponibilidad', 'disponibles') == 'disponibles' ? 'selected' : '' }}>Archivos disponibles</option>
               <option value="no_disponibles" {{ request('disponibilidad') == 'no_disponibles' ? 'selected' : '' }}>Archivos no disponibles</option>
             </select>
             <select name="orden" class="form-select mb-3" onchange="document.getElementById('filtros-form').submit();">
@@ -58,11 +58,8 @@
                 $isVideo = in_array($tipoArchivo, ['video', 'mp4'], true);
                 $portadaUrl = null;
                 $portadaDisponible = false;
-                $fallbackImg = 'imagenes/icopdf.svg';
-                if ($isVideo) {
-                  $encoded = implode('/', array_map('rawurlencode', explode('/', 'imagenes/youtube.png')));
-                  $portadaUrl = url('/' . $encoded);
-                } elseif (!empty($publicacion->portada_path)) {
+                $fallbackImg = $isVideo ? 'imagenes/youtube.png' : 'imagenes/icopdf.svg';
+                if (!empty($publicacion->portada_path)) {
                   $p = trim((string) $publicacion->portada_path);
                   $p = str_replace('\\', '/', $p);
 
@@ -70,14 +67,17 @@
                     $portadaUrl = $p;
                     $portadaDisponible = true;
                   } else {
-                    $p = ltrim($p, '/');
+                    $p = ltrim(rawurldecode($p), '/');
+                    if (str_starts_with($p, 'storage/')) {
+                      $p = substr($p, 8);
+                    }
                     if (str_ends_with($p, 'icopdf.png')) {
                       $p = 'imagenes/icopdf.svg';
                     }
                     if (str_starts_with($p, 'imagenes/')) {
-                      $exists = file_exists(public_path($p));
+                      $exists = is_file(public_path($p)) || is_file(base_path('../' . $p));
                       $safePath = $exists ? $p : $fallbackImg;
-                      $portadaDisponible = $exists;
+                      $portadaDisponible = $exists && !in_array(basename($p), ['icopdf.svg', 'icopdf.png', 'youtube.png'], true);
                       $encoded = implode('/', array_map('rawurlencode', explode('/', $safePath)));
                       $portadaUrl = url('/' . $encoded);
                     } else {
@@ -99,7 +99,7 @@
                   if (str_starts_with($f, 'http')) {
                     $link = $f;
                   } else {
-                    $candidate = ltrim($f, '/');
+                    $candidate = ltrim(str_replace('\\', '/', $f), '/');
                     $exists = file_exists(storage_path('app/public/' . $candidate));
                     $link = $exists ? asset('storage/' . $candidate) : null;
                   }
@@ -120,7 +120,7 @@
 
                   if ($youtubeHost === 'youtu.be') {
                     $youtubeId = explode('/', $youtubePath)[0] ?? null;
-                  } elseif (in_array($youtubeHost, ['youtube.com', 'm.youtube.com', 'music.youtube.com'], true)) {
+                  } elseif (in_array($youtubeHost, ['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'], true)) {
                     parse_str($youtubeUrl['query'] ?? '', $youtubeQuery);
                     if ($youtubePath === 'watch') {
                       $youtubeId = $youtubeQuery['v'] ?? null;
@@ -135,6 +135,13 @@
                 }
 
                 $isVideo = $isVideo || $youtubeId !== null;
+                $fallbackUrl = asset($isVideo ? 'imagenes/youtube.png' : 'imagenes/icopdf.svg');
+                $extension = strtolower(pathinfo(parse_url($link ?? '', PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
+                $imagenArchivo = $link && in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $link : null;
+                $pdfUrl = $link && ($tipoArchivo === 'pdf' || $extension === 'pdf') ? $link : null;
+                if (!$portadaDisponible) {
+                  $portadaUrl = $imagenArchivo ?: $fallbackUrl;
+                }
               @endphp
 
               @if($youtubeId)
@@ -144,7 +151,10 @@
                     class="card-img-top portada-img"
                     alt="Miniatura de {{ $publicacion->titulo }}"
                     loading="lazy"
-                    onerror="this.onerror=null;this.src='https://i.ytimg.com/vi/{{ $youtubeId }}/hqdefault.jpg';">
+                    data-thumbnail
+                    data-youtube-id="{{ $youtubeId }}"
+                    data-cover="{{ $portadaDisponible ? $portadaUrl : '' }}"
+                    data-fallback="{{ $fallbackUrl }}">
                   <button type="button"
                     class="btn btn-gob position-absolute rounded-circle js-video-preview"
                     data-video-id="{{ $youtubeId }}"
@@ -155,7 +165,10 @@
                   </button>
                 </div>
               @elseif($portadaUrl)
-                <img src="{{ $portadaUrl }}" class="card-img-top portada-img" alt="{{ $publicacion->titulo }}" onload="if (this.naturalHeight && this.naturalHeight < 400) { this.classList.add('img-small'); }">
+                <img src="{{ $portadaUrl }}" class="card-img-top portada-img" alt="{{ $publicacion->titulo }}"
+                  loading="lazy" data-thumbnail data-pdf-url="{{ $pdfUrl }}"
+                  data-needs-preview="{{ !$portadaDisponible && $pdfUrl ? 'true' : 'false' }}"
+                  data-file-image="{{ $imagenArchivo }}" data-fallback="{{ $fallbackUrl }}">
               @endif
               <div class="card-body d-flex flex-column">
                 <h6 class="card-title text-gob fw-bold">{{ $publicacion->titulo }}</h6>
@@ -191,11 +204,6 @@
   </div>
 </main>
 
-<!-- Botón flotante en esquina inferior derecha -->
-<a href="{{ route('colaborador') }}" class="btn btn-gob" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-  Hacerme colaborador
-</a>
-
 <div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
@@ -228,6 +236,7 @@
 @endsection
 
 @push('scripts')
+@vite('resources/js/publication-thumbnails.js')
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const modalEl = document.getElementById('imagenModal');

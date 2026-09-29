@@ -23,19 +23,11 @@ Route::post('/suscripciones', [SuscripcionController::class, 'store'])
 Route::get('/pub_tecnicas', function(){ return view('pub_tecnicas'); })->name('pub_tecnicas');
 Route::get('/desarrolladores', function(){ return view('desarrolladores'); })->name('desarrolladores');
 
-// Vista de subida de publicaciones (solo visual)
-Route::get('/publicaciones/subir', function() {
-    return view('publicaciones.subir');
-})->name('publicaciones.subir');
-
-// Ruta para crear publicaciones
-Route::get('/publicaciones/create', [PublicacionController::class, 'create'])->name('publicaciones.create');
-Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
-
-// Ruta para el formulario de carga de contenido
-Route::get('/publicaciones/formulario', function() {
-    return view('publicaciones.formulario');
-})->name('publicaciones.formulario');
+// Las direcciones antiguas llevan al único formulario de publicaciones.
+Route::get('/publicaciones/subir', [\App\Http\Controllers\AdminPublicacionController::class, 'legacyCreate'])->middleware('auth')->name('publicaciones.subir');
+Route::get('/publicaciones/create', [\App\Http\Controllers\AdminPublicacionController::class, 'legacyCreate'])->middleware('auth')->name('publicaciones.create');
+Route::get('/publicaciones/formulario', [\App\Http\Controllers\AdminPublicacionController::class, 'legacyCreate'])->middleware('auth')->name('publicaciones.formulario');
+Route::post('/publicaciones', [\App\Http\Controllers\AdminPublicacionController::class, 'store'])->middleware('auth')->name('publicaciones.store');
 
 use App\Http\Controllers\AdminAuthController;
 
@@ -87,7 +79,7 @@ Route::prefix('biblioteca/administrador')->group(function () {
 Route::get('/imagenes/{path}', [ImageController::class, 'show'])->where('path', '.*');
 
 // Rutas para gestión de archivos
-Route::post('/files', [FileController::class, 'store'])->name('files.store');
+Route::post('/files', [\App\Http\Controllers\AdminPublicacionController::class, 'store'])->middleware('auth')->name('files.store');
 Route::get('/files', [FileController::class, 'index'])->name('files.index');
 Route::get('/files/{id}/download', [FileController::class, 'download'])->name('files.download');
-Route::delete('/files/{id}', [FileController::class, 'destroy'])->name('files.destroy');
+Route::delete('/files/{id}', [FileController::class, 'destroy'])->middleware(['auth', 'modulo:archivos,borrar'])->name('files.destroy');

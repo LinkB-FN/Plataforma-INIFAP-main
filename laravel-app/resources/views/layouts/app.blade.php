@@ -46,14 +46,14 @@
             <ol class="breadcrumb top-buffer">
                 <li><a href="http://www.gob.mx"><i class="icon icon-home"></i></a></li>
                 <li><a href="http://www.gob.mx/inifap">Instituto Nacional de Investigaciones Forestales, Agrícolas y Pecuarias</a></li>
-                <li><a href="{{ route('home') }}">Inifap C.E. Zacatecas</a></li>
+                <li><a href="https://zacatecas.inifap.gob.mx/">Inifap C.E. Zacatecas</a></li>
                 <li class="active">@yield('title', 'Plataforma')</li>
             </ol>
         </div>
 
         <div class="container mb-5">
             <div class="row">
-                @if(request()->routeIs('colaborador') || request()->is('biblioteca/administrador*'))
+                @if(request()->routeIs('colaborador', 'desarrolladores') || request()->is('biblioteca/administrador*'))
                     <div class="col-md-12 col-sm-12">
                         @yield('content')
                     </div>
@@ -68,6 +68,18 @@
                             <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('publicaciones.index') }}">
                                 <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Publicaciones
                             </a>
+                            <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('publicaciones.index', ['ambito' => 'tecnicas']) }}">
+                                <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Publicaciones técnicas
+                            </a>
+                            <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('publicaciones.index', ['ambito' => 'cientificas']) }}">
+                                <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Publicaciones científicas
+                            </a>
+                            <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('publicaciones.index', ['tipo' => 'video']) }}">
+                                <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Videos
+                            </a>
+                            <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('publicaciones.index', ['ambito' => 'ilustraciones']) }}">
+                                <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Ilustraciones
+                            </a>
                             @if(Auth::check())
                                 <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('admin.dashboard') }}">
                                     <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Panel de Administración
@@ -78,10 +90,6 @@
                                 <form id="logout-form" action="{{ route('admin.logout') }}" method="POST" class="d-none">
                                     @csrf
                                 </form>
-                            @else
-                                <a class="list-group-item d-flex align-items-center" style="text-decoration: none;" href="{{ route('login') }}">
-                                    <img src="http://zacatecas.inifap.gob.mx/images/templatemo_list.png" style="margin-right:10px;"> Iniciar Sesión
-                                </a>
                             @endif
                         </div>
 
