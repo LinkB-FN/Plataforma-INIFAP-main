@@ -2,11 +2,12 @@
 # Installs Plataforma INIFAP (laravel-app) on Debian 12 or 13: Nginx, PHP-FPM, PostgreSQL, Node.js,
 # ffmpeg and Ghostscript for compressing uploads, and a queue worker service that runs the compression.
 #
-# Usage, from a copy of this repository on the server:
+# Usage, from an installation package (deploy/build-release.sh) or a copy of this repository:
 #   sudo bash deploy/provision-debian.sh
 #
-# The database schema (1_biblioteca_inifap.sql and 2_biblioteca_seguridad.sql) is not in git.
-# Put both files in laravel-app/ (where .gitignore expects them) or point SCHEMA_DIR at them.
+# The database schema (1_biblioteca_inifap.sql and 2_biblioteca_seguridad.sql) is not in git; the
+# installation package includes it. From a repository, put both files in laravel-app/ or set SCHEMA_DIR.
+# The package also brings the frontend already built, so the server needs no Node.js.
 #
 # Safe to run again to redeploy: it keeps .env, uploaded files, the database and the admin password.
 #
@@ -40,6 +41,8 @@ if [ -f "$APP_DIR/.env" ]; then
     DB_PASS=$(sed -n 's/^DB_PASSWORD=//p' "$APP_DIR/.env")
 fi
 DB_PASS=${DB_PASS:-$(random_secret)}
+PREBUILT=
+[ -f "$SRC/laravel-app/public/build/manifest.json" ] && PREBUILT=1
 
 echo "==> 1. Packages"
 export DEBIAN_FRONTEND=noninteractive
@@ -56,7 +59,9 @@ php -r 'exit(function_exists("imagewebp") ? 0 : 1);' \
     || echo "WARNING: PHP GD has no WebP support; images will be stored as uploaded." >&2
 
 echo "==> 2. Node.js $NODE_MAJOR (NodeSource)"
-if ! command -v node >/dev/null || ! node -e '
+if [ -n "$PREBUILT" ]; then
+    echo "Not needed: the frontend comes already built."
+elif ! command -v node >/dev/null || ! node -e '
     const [major, minor] = process.versions.node.split(".").map(Number);
     process.exit(major > 22 || (major === 22 && minor >= 13) ? 0 : 1)'; then
     install -d -m 0755 /etc/apt/keyrings
@@ -67,7 +72,7 @@ if ! command -v node >/dev/null || ! node -e '
     apt-get update -q
     apt-get install -y -q nodejs
 fi
-echo "Node $(node --version)"
+[ -n "$PREBUILT" ] || echo "Node $(node --version)"
 
 echo "==> 3. PostgreSQL role and database"
 systemctl enable --now postgresql
@@ -84,7 +89,9 @@ echo "==> 4. Application files"
 systemctl stop "$WORKER" 2>/dev/null || true
 mkdir -p "$APP_DIR"
 # Excluded paths are also kept on the server: rsync --delete does not touch them.
-rsync -a --delete --exclude .env --exclude vendor --exclude node_modules --exclude public/build \
+BUILD_RULE=(--exclude public/build)
+[ -n "$PREBUILT" ] && BUILD_RULE=()
+rsync -a --delete --exclude .env --exclude vendor --exclude node_modules "${BUILD_RULE[@]}" \
     --exclude 'storage/logs/*' --exclude 'storage/framework/sessions/*' --exclude 'storage/framework/views/*' \
     --exclude 'storage/framework/cache/*' --exclude 'storage/app/public/uploads' --exclude 'storage/app/medios-tmp' \
     --exclude public/storage \
@@ -126,8 +133,12 @@ chown www-data:www-data .env
 chmod 640 .env
 
 echo "==> 6. Frontend assets (Vite)"
-as_web npm ci --no-audit --no-fund
-as_web npm run build
+if [ -n "$PREBUILT" ]; then
+    echo "Already built in the package."
+else
+    as_web npm ci --no-audit --no-fund
+    as_web npm run build
+fi
 
 echo "==> 7. Database schema and data"
 as_web php artisan migrate --force
@@ -239,3 +250,5 @@ if [ -n "$ADMIN_CREATED" ]; then
     echo "Admin account (also saved in $CREDENTIALS, readable only by root):"
     sed 's/^/    /' "$CREDENTIALS"
 fi
+echo "Next: schedule backups with  sudo bash $SRC/deploy/backup.sh --daily"
+echo "Health check any time with   sudo bash $SRC/deploy/status.sh"
