@@ -104,6 +104,7 @@ class AdminPublicacionController extends Controller
         $datos = $archivos->validar($request, (bool) $puedeConservar);
         $nuevasRutas = [];
         $obsoletas = [];
+        $rutaArchivo = null;
 
         try {
             $cambios = [
@@ -116,15 +117,17 @@ class AdminPublicacionController extends Controller
                 $cambios += ['id_autor' => Auth::id(), 'muestra' => true, 'activo' => true, 'creado_en' => now()];
             }
             if ($request->hasFile('portada')) {
-                $cambios['url_imagen'] = $archivos->guardar($request->file('portada'), 'uploads/portadas');
+                $cambios['url_imagen'] = $archivos->guardar($request->file('portada'), 'uploads/portadas',
+                    (int) config('medios.portada_lado_maximo', 1200));
                 $nuevasRutas[] = $cambios['url_imagen'];
                 $obsoletas[] = $publicacion->url_imagen;
             }
             $contenido = null;
             if ($datos['origen'] === 'archivo') {
-                $ruta = $archivos->guardar($request->file('file'), 'uploads/files');
-                $nuevasRutas[] = $ruta;
-                $contenido = $archivos->datosArchivo($ruta, $request->file('file')->extension());
+                $rutaArchivo = $archivos->guardar($request->file('file'), 'uploads/files');
+                $nuevasRutas[] = $rutaArchivo;
+                // The stored extension can differ from the upload: images are saved as WebP.
+                $contenido = $archivos->datosArchivo($rutaArchivo, pathinfo($rutaArchivo, PATHINFO_EXTENSION));
             } elseif ($datos['origen'] === 'enlace') {
                 $contenido = $archivos->datosEnlace($datos['external_url']);
             }
@@ -152,6 +155,9 @@ class AdminPublicacionController extends Controller
         }
 
         $archivos->limpiar($obsoletas);
+        if ($rutaArchivo) {
+            $archivos->optimizarDespues($rutaArchivo);
+        }
         if ($notificador) {
             try {
                 $notificador->notificar($publicacion);

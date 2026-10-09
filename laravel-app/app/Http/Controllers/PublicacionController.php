@@ -52,7 +52,7 @@ class PublicacionController extends Controller
 
         if (!empty($tipo)) {
             if ($tipo === 'video') {
-                $query->whereIn('a.formato', ['video', 'mp4']);
+                $query->whereIn('a.formato', ['video', 'mp4', 'mov', 'webm']);
             } else {
                 $query->where('a.formato', $tipo);
             }

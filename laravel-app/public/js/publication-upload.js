@@ -34,7 +34,7 @@
         if (!selected) return;
         const extension = selected.name.split('.').pop().toLowerCase();
         if (!(extension in limits)) {
-            file.setCustomValidity('Selecciona un PDF, MP3, MP4, JPG o PNG.');
+            file.setCustomValidity('Selecciona un PDF, MP3, video (MP4, MOV o WebM) o imagen (JPG, PNG o WebP).');
         } else if (selected.size > limits[extension] * 1024) {
             file.setCustomValidity('Este archivo supera el límite de ' + limits[extension] / 1024 + ' MB.');
         }
