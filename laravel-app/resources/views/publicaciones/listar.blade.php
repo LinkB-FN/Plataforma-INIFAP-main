@@ -33,11 +33,13 @@
             @foreach ($publicacionesTecnicas as $publicacion)
                 <div class="col-md-4 mb-4">
                     <div class="card">
-                        <img src="{{ asset($publicacion->portada) }}" class="card-img-top" alt="{{ $publicacion->titulo }}">
+                        @if($publicacion->portada)
+                            <img src="{{ str_starts_with($publicacion->portada, 'http') ? $publicacion->portada : (str_starts_with($publicacion->portada, 'uploads/') ? asset('storage/'.$publicacion->portada) : asset($publicacion->portada)) }}" class="card-img-top" alt="{{ $publicacion->titulo }}">
+                        @endif
                         <div class="card-body">
                             <h5 class="card-title">{{ $publicacion->titulo }}</h5>
                             <p class="card-text">Año: {{ $publicacion->year }}</p>
-                            <a href="{{ $publicacion->url }}" class="btn btn-primary" target="_blank">Ver más</a>
+                            <a href="{{ str_starts_with($publicacion->url ?? '', 'uploads/') ? asset('storage/'.$publicacion->url) : ($publicacion->url ?? '#') }}" class="btn btn-primary" target="_blank">Ver más</a>
                         </div>
                     </div>
                 </div>
@@ -69,11 +71,13 @@
             @foreach ($publicacionesCientificas as $publicacion)
                 <div class="col-md-4 mb-4">
                     <div class="card">
-                        <img src="{{ asset($publicacion->portada) }}" class="card-img-top" alt="{{ $publicacion->titulo }}">
+                        @if($publicacion->portada)
+                            <img src="{{ str_starts_with($publicacion->portada, 'http') ? $publicacion->portada : (str_starts_with($publicacion->portada, 'uploads/') ? asset('storage/'.$publicacion->portada) : asset($publicacion->portada)) }}" class="card-img-top" alt="{{ $publicacion->titulo }}">
+                        @endif
                         <div class="card-body">
                             <h5 class="card-title">{{ $publicacion->titulo }}</h5>
                             <p class="card-text">Año: {{ $publicacion->year }}</p>
-                            <a href="{{ $publicacion->url }}" class="btn btn-primary" target="_blank">Ver más</a>
+                            <a href="{{ str_starts_with($publicacion->url ?? '', 'uploads/') ? asset('storage/'.$publicacion->url) : ($publicacion->url ?? '#') }}" class="btn btn-primary" target="_blank">Ver más</a>
                         </div>
                     </div>
                 </div>

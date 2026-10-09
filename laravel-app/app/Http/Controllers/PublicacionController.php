@@ -43,7 +43,7 @@ class PublicacionController extends Controller
             );
 
         if (!empty($buscar)) {
-            $query->where('p.titulo', 'like', '%' . $buscar . '%');
+            $this->filtrarPorTitulo($query, $buscar);
         }
 
         if (!empty($anio)) {
@@ -134,7 +134,7 @@ class PublicacionController extends Controller
                 $join->on('p.id', '=', 'a.id_publicacion')->where('a.es_principal', true);
             })
             ->where('tp.clave', 'tecnica')
-            ->select('p.titulo', 'p.ano as year', 'a.formato as tipo');
+            ->select('p.titulo', 'p.ano as year', 'a.formato as tipo', 'p.url_imagen as portada', 'a.url_archivo as url');
 
         $queryCientificas = DB::table('publicaciones as p')
             ->join('tipos_publicacion as tp', 'p.id_tipo', '=', 'tp.id')
@@ -142,12 +142,12 @@ class PublicacionController extends Controller
                 $join->on('p.id', '=', 'a.id_publicacion')->where('a.es_principal', true);
             })
             ->where('tp.clave', 'cientifica')
-            ->select('p.titulo', 'p.ano as year', 'a.formato as tipo');
+            ->select('p.titulo', 'p.ano as year', 'a.formato as tipo', 'p.url_imagen as portada', 'a.url_archivo as url');
 
         // Aplicar filtros
         if ($request->filled('buscar')) {
-            $queryTecnicas->where('p.titulo', 'like', '%' . $request->input('buscar') . '%');
-            $queryCientificas->where('p.titulo', 'like', '%' . $request->input('buscar') . '%');
+            $this->filtrarPorTitulo($queryTecnicas, $request->input('buscar'));
+            $this->filtrarPorTitulo($queryCientificas, $request->input('buscar'));
         }
 
         if ($request->filled('tipo')) {
@@ -163,11 +163,22 @@ class PublicacionController extends Controller
         $publicacionesTecnicas = $queryTecnicas->get();
         $publicacionesCientificas = $queryCientificas->get();
 
-        Log::info('Publicaciones Técnicas:', $publicacionesTecnicas->toArray());
-        Log::info('Publicaciones Científicas:', $publicacionesCientificas->toArray());
-
         return view('publicaciones.listar', compact('publicacionesTecnicas', 'publicacionesCientificas'));
     }
 
     // edit/update/destroy can be added similarly with ownership checks
+
+    // Title search that ignores case and accents: "Frijol", "frijol" and "maiz"/"maíz" match
+    // the same records. Uses only lower() and translate(), so it needs no PostgreSQL extension.
+    private function filtrarPorTitulo($query, string $buscar): void
+    {
+        $con = 'ÁÉÍÓÚÜÑáéíóúüñ';
+        $sin = 'AEIOUUNaeiouun';
+
+        $termino = mb_strtolower(strtr($buscar, ['Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U', 'Ñ' => 'N',
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']));
+        $termino = addcslashes(trim($termino), '\\%_');
+
+        $query->whereRaw("lower(translate(p.titulo, '$con', '$sin')) LIKE ?", ['%' . $termino . '%']);
+    }
 }
