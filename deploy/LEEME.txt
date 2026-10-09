@@ -1,0 +1,46 @@
+PLATAFORMA INIFAP - PAQUETE DE INSTALACIÓN
+==========================================
+
+Este paquete instala la Plataforma INIFAP (biblioteca de publicaciones) en un
+servidor Debian 12 o 13 limpio. Trae todo lo necesario: la aplicación, el
+esquema de la base de datos y la interfaz ya compilada.
+
+La guía completa está en deploy/GUIA-INSTALACION.md.
+
+
+INSTALACIÓN RÁPIDA
+------------------
+
+1. Copia el paquete al servidor (desde tu computadora):
+
+     scp plataforma-inifap-*.tar.gz usuario@IP-DEL-SERVIDOR:
+
+2. En el servidor, descomprímelo y ejecuta el instalador:
+
+     tar -xzf plataforma-inifap-*.tar.gz
+     cd plataforma-inifap-*/
+     sudo bash deploy/provision-debian.sh
+
+   Tarda entre 5 y 15 minutos según la conexión a internet.
+
+3. Al terminar, el instalador muestra la dirección del sitio y la contraseña
+   del administrador (admin@inifap.gob.mx). También la guarda en
+   /root/inifap-admin.txt. Cámbiala en el panel:
+   Gestión de Usuarios > Editar.
+
+4. Programa los respaldos diarios:
+
+     sudo bash deploy/backup.sh --daily
+
+
+OTRAS TAREAS
+------------
+
+  Ver si todo funciona ............ sudo bash deploy/status.sh
+  Hacer un respaldo ahora ......... sudo bash deploy/backup.sh
+  Restaurar un respaldo ........... sudo bash deploy/restore.sh /var/backups/inifap/ARCHIVO.tar
+  Olvidé la contraseña del admin .. sudo bash deploy/admin-password.sh
+  Actualizar a una versión nueva .. descomprime el paquete nuevo y vuelve a
+                                    ejecutar deploy/provision-debian.sh
+
+No borres la carpeta del paquete: los scripts de deploy/ se ejecutan desde ahí.

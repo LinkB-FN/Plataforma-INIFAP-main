@@ -72,6 +72,12 @@ Route::prefix('biblioteca/administrador')->group(function () {
         Route::middleware('modulo:usuarios,crear')->group(function () {
             Route::post('/usuarios', [\App\Http\Controllers\AdminUsuarioController::class, 'store'])->name('admin.usuarios.post');
         });
+        Route::middleware('modulo:usuarios,editar')->group(function () {
+            Route::get('/usuarios/{id}/editar', [\App\Http\Controllers\AdminUsuarioController::class, 'edit'])->name('admin.usuarios.edit');
+            Route::put('/usuarios/{id}', [\App\Http\Controllers\AdminUsuarioController::class, 'update'])->name('admin.usuarios.update');
+        });
+        Route::delete('/usuarios/{id}', [\App\Http\Controllers\AdminUsuarioController::class, 'destroy'])
+            ->middleware('modulo:usuarios,borrar')->name('admin.usuarios.destroy');
     });
 });
 

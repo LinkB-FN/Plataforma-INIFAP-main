@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Jobs\OptimizarArchivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -26,7 +28,8 @@ class ArchivosPublicacion
             $post > 0 ? max(0, $post - 6 * 1024 ** 2) : PHP_INT_MAX);
 
         return array_map(fn ($mb) => (int) floor(min($mb * 1024 ** 2, $capacidad) / 1024), [
-            'pdf' => 20, 'mp3' => 20, 'mp4' => 200, 'jpg' => 5, 'jpeg' => 5, 'png' => 5,
+            'pdf' => 20, 'mp3' => 20, 'mp4' => 200, 'mov' => 200, 'webm' => 200,
+            'jpg' => 5, 'jpeg' => 5, 'png' => 5, 'webp' => 5,
         ]);
     }
 
@@ -42,7 +45,7 @@ class ArchivosPublicacion
             'external_url' => 'prohibited_unless:origen,enlace|required_if:origen,enlace|nullable|url:http,https|max:600',
             'file' => [
                 'prohibited_unless:origen,archivo', 'required_if:origen,archivo', 'nullable', 'file',
-                'mimes:pdf,mp3,mp4,jpg,jpeg,png',
+                'mimes:pdf,mp3,mp4,mov,webm,jpg,jpeg,png,webp',
                 function ($attribute, $file, $fail) use ($limites) {
                     if (!$file instanceof \Illuminate\Http\UploadedFile || !$file->isValid()) {
                         return;
@@ -61,7 +64,7 @@ class ArchivosPublicacion
             'required' => 'El campo :attribute es obligatorio.',
             'required_if' => 'Selecciona el archivo o escribe el enlace correspondiente.',
             'prohibited_unless' => 'Elige solamente un archivo o un enlace.',
-            'file.mimes' => 'El archivo debe ser PDF, MP3, MP4, JPG o PNG válido.',
+            'file.mimes' => 'El archivo debe ser PDF, MP3, video MP4/MOV/WebM o imagen JPG/PNG/WebP válido.',
             'portada.mimes' => 'La portada debe ser JPG, PNG o WebP.',
             'portada.max' => 'La portada no puede superar 5 MB.',
             'external_url.url' => 'Escribe un enlace completo que comience con https:// o http://.',
@@ -69,8 +72,17 @@ class ArchivosPublicacion
         ], ['titulo' => 'título', 'year' => 'año', 'tipo_publicacion' => 'tipo de publicación', 'origen' => 'contenido'])->validate();
     }
 
-    public function guardar(\Illuminate\Http\UploadedFile $file, string $carpeta): string
+    public function guardar(\Illuminate\Http\UploadedFile $file, string $carpeta, ?int $ladoMaximo = null): string
     {
+        if (in_array(strtolower($file->getClientOriginalExtension()), OptimizadorMedios::IMAGENES, true)) {
+            $webp = app(OptimizadorMedios::class)
+                ->imagenAWebp($file->getRealPath(), $ladoMaximo ?? (int) config('medios.imagen_lado_maximo', 2560));
+            $ruta = $carpeta.'/'.Str::random(40).'.webp';
+            if ($webp !== null && Storage::disk('public')->put($ruta, $webp)) {
+                return $ruta;
+            }
+        }
+
         $ruta = $file->store($carpeta, 'public');
         if (!$ruta) {
             throw new \RuntimeException('No se pudo escribir el archivo.');
@@ -92,10 +104,24 @@ class ArchivosPublicacion
         return [
             'url_archivo' => $ruta, 'formato' => $formato,
             'categoria_medio' => match ($formato) {
-                'mp4', 'video' => 'video', 'jpg', 'jpeg', 'png' => 'imagen',
+                'mp4', 'mov', 'webm', 'video' => 'video', 'jpg', 'jpeg', 'png', 'webp' => 'imagen',
                 'mp3' => 'audio', default => 'documento',
             },
         ];
+    }
+
+    /** Queues the compression of an uploaded PDF, video or audio file (images are converted in guardar()). */
+    public function optimizarDespues(string $ruta): void
+    {
+        if (!in_array(strtolower(pathinfo($ruta, PATHINFO_EXTENSION)), OptimizadorMedios::EN_COLA, true)) {
+            return;
+        }
+        try {
+            OptimizarArchivo::dispatch($ruta);
+        } catch (\Throwable $e) {
+            // The publication is already saved with the original file, which still works.
+            Log::warning('Could not queue the upload optimization.', ['ruta' => $ruta, 'error' => $e->getMessage()]);
+        }
     }
 
     public function limpiar(array $rutas): void

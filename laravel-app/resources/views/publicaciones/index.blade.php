@@ -55,7 +55,7 @@
             <div class="card card-publicacion h-100">
               @php
                 $tipoArchivo = strtolower((string) ($publicacion->tipo ?? ''));
-                $isVideo = in_array($tipoArchivo, ['video', 'mp4'], true);
+                $isVideo = in_array($tipoArchivo, ['video', 'mp4', 'mov', 'webm'], true);
                 $portadaUrl = null;
                 $portadaDisponible = false;
                 $fallbackImg = $isVideo ? 'imagenes/youtube.png' : 'imagenes/icopdf.svg';

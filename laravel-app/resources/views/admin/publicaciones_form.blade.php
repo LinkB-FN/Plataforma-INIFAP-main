@@ -63,12 +63,13 @@
             @endif
             <div class="form-group" data-source="archivo">
                 <label for="file">Archivo</label>
-                <input type="file" id="file" name="file" accept=".pdf,.mp3,.mp4,.jpg,.jpeg,.png" aria-describedby="file-help file-feedback">
+                <input type="file" id="file" name="file" accept=".pdf,.mp3,.mp4,.mov,.webm,.jpg,.jpeg,.png,.webp" aria-describedby="file-help file-feedback">
                 <p id="file-help" class="help-block">
                     PDF y MP3: hasta {{ $limites['pdf'] / 1024 }} MB.
-                    MP4: hasta {{ $limites['mp4'] / 1024 }} MB.
-                    JPG y PNG: hasta {{ $limites['jpg'] / 1024 }} MB.
-                    El formato se detecta automáticamente.
+                    Video MP4, MOV o WebM: hasta {{ $limites['mp4'] / 1024 }} MB.
+                    Imagen JPG, PNG o WebP: hasta {{ $limites['jpg'] / 1024 }} MB.
+                    El formato se detecta automáticamente. Las imágenes se guardan en WebP, y los PDF,
+                    videos y audios se comprimen después de publicar para que carguen más rápido.
                 </p>
                 <p id="file-feedback" class="help-block" aria-live="polite"></p>
                 @error('file') <span class="help-block text-danger">{{ $message }}</span> @enderror

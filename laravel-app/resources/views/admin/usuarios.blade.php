@@ -8,10 +8,14 @@
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     .btn-primary { background: #2980b9; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
     .btn-primary:hover { background: #2471a3; }
+    .btn-danger { background: #c0392b; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+    .btn-danger:hover { background: #a93226; }
+    td.acciones { white-space: nowrap; }
+    td.acciones .btn-primary, td.acciones .btn-danger { padding: 6px 10px; font-size: 13px; text-decoration: none; }
     .permissions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 10px; }
     .perm-box { border: 1px solid #eee; padding: 10px; border-radius: 4px; background: #fafafa; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
     th { background-color: #f2f2f2; }
     .alert-success { background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin-bottom: 20px;}
     .alert-danger { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px;}
@@ -96,6 +100,7 @@
                     <th>Rol Asignado</th>
                     <th>Estado</th>
                     <th>Último Acceso</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -112,6 +117,14 @@
                             @endif
                         </td>
                         <td>{{ $user->ultimo_acceso ? date('d/m/Y H:i', strtotime($user->ultimo_acceso)) : 'Nunca' }}</td>
+                        <td class="acciones">
+                            <a href="{{ route('admin.usuarios.edit', $user->id) }}" class="btn btn-primary">Editar</a>
+                            <form method="POST" action="{{ route('admin.usuarios.destroy', $user->id) }}" style="display:inline;" onsubmit="return confirm('¿Eliminar este usuario?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger">Eliminar</button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
